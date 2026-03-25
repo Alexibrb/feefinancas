@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -10,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins, Wallet, Eye } from "lucide-react";
+import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins, Wallet, Eye, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -25,6 +24,21 @@ export default function HistoryPage() {
   const [recentFilterMonth, setRecentFilterMonth] = useState("all");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [showAllRecent, setShowAllRecent] = useState(false);
+
+  // Função para resetar filtros
+  const resetFilters = () => {
+    setAnnualFilterYear(currentYear);
+    setMonthlyFilterYear(currentYear);
+    setRecentFilterMonth("all");
+    setShowAllRecent(false);
+    setExpandedMonth(null);
+  };
+
+  // Verifica se algum filtro está diferente do padrão para mostrar o botão de reset
+  const hasActiveFilters = annualFilterYear !== currentYear || 
+                          monthlyFilterYear !== currentYear || 
+                          recentFilterMonth !== "all" || 
+                          showAllRecent;
 
   // Opções para os Selects baseadas nos dados existentes
   const availableYears = useMemo(() => {
@@ -143,11 +157,22 @@ export default function HistoryPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <header className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+        <header className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-headline font-bold text-primary">Histórico de Mordomia</h1>
             <p className="text-sm sm:text-base text-muted-foreground">Consulte o resumo de entradas e dízimos de meses anteriores.</p>
           </div>
+          {hasActiveFilters && (
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={resetFilters}
+              className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+            >
+              <RotateCcw className="h-4 w-4" />
+              Limpar Filtros
+            </Button>
+          )}
         </header>
 
         <div className="grid gap-6 lg:grid-cols-3 mb-8">
