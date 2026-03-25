@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins, Wallet } from "lucide-react";
+import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins, Wallet, Eye } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -24,6 +24,7 @@ export default function HistoryPage() {
   const [monthlyFilterYear, setMonthlyFilterYear] = useState(currentYear);
   const [recentFilterMonth, setRecentFilterMonth] = useState("all");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
+  const [showAllRecent, setShowAllRecent] = useState(false);
 
   // Opções para os Selects baseadas nos dados existentes
   const availableYears = useMemo(() => {
@@ -58,6 +59,14 @@ export default function HistoryPage() {
       
       years[year][monthIndex] += (entry.amount * 0.1);
     });
+
+    if (annualFilterYear === "all") {
+      const allYearsData = new Array(12).fill(0);
+      Object.values(years).forEach(yearData => {
+        yearData.forEach((val, idx) => allYearsData[idx] += val);
+      });
+      return { year: "Todo o Histórico", months: allYearsData, totalYear: allYearsData.reduce((s, v) => s + v, 0) };
+    }
 
     const selectedYearData = years[annualFilterYear] || new Array(12).fill(0);
     const totalYear = selectedYearData.reduce((sum, val) => sum + val, 0);
@@ -96,7 +105,7 @@ export default function HistoryPage() {
     });
 
     return Object.entries(groups)
-      .filter(([, data]) => data.year === monthlyFilterYear)
+      .filter(([, data]) => monthlyFilterYear === "all" || data.year === monthlyFilterYear)
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([key, data]) => ({ 
         key, 
@@ -105,7 +114,7 @@ export default function HistoryPage() {
       }));
   }, [entries, monthlyFilterYear]);
 
-  // Cálculos totais para o ano selecionado no resumo mensal
+  // Cálculos totais para o período selecionado no resumo mensal
   const totalMonthlyTithe = useMemo(() => {
     return groupedEntries.reduce((sum, group) => sum + group.tithe, 0);
   }, [groupedEntries]);
@@ -115,11 +124,12 @@ export default function HistoryPage() {
   }, [groupedEntries]);
 
   const filteredRecentEntries = useMemo(() => {
-    return [...entries]
+    const filtered = [...entries]
       .sort((a, b) => b.date.localeCompare(a.date))
-      .filter(e => recentFilterMonth === "all" || format(parseISO(e.date), 'yyyy-MM') === recentFilterMonth)
-      .slice(0, 5);
-  }, [entries, recentFilterMonth]);
+      .filter(e => recentFilterMonth === "all" || format(parseISO(e.date), 'yyyy-MM') === recentFilterMonth);
+    
+    return showAllRecent ? filtered : filtered.slice(0, 5);
+  }, [entries, recentFilterMonth, showAllRecent]);
 
   if (!isLoaded || !currentUser) return null;
 
@@ -149,24 +159,27 @@ export default function HistoryPage() {
                   <div className="flex items-center gap-2">
                     <CardTitle className="font-headline text-lg sm:text-xl">Resumo Mensal</CardTitle>
                     <Select value={monthlyFilterYear} onValueChange={setMonthlyFilterYear}>
-                      <SelectTrigger className="w-[110px] h-9 text-xs">
+                      <SelectTrigger className="w-[140px] h-9 text-xs">
                         <SelectValue placeholder="Ano" />
                       </SelectTrigger>
                       <SelectContent>
+                        <SelectItem value="all">Todo o Histórico</SelectItem>
                         {availableYears.map(year => (
                           <SelectItem key={year} value={year}>{year}</SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
                   </div>
-                  <CardDescription className="text-xs sm:text-sm mt-1">Consolidado do ano {monthlyFilterYear}.</CardDescription>
+                  <CardDescription className="text-xs sm:text-sm mt-1">
+                    {monthlyFilterYear === "all" ? "Consolidado de todo o período." : `Consolidado do ano ${monthlyFilterYear}.`}
+                  </CardDescription>
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-border shadow-sm">
                     <Wallet className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <div className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">Entradas {monthlyFilterYear}</div>
+                      <div className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">Entradas</div>
                       <div className="text-lg font-headline font-bold text-foreground">
                         {currencyFormatter.format(totalMonthlyIncome)}
                       </div>
@@ -175,7 +188,7 @@ export default function HistoryPage() {
                   <div className="flex items-center gap-3 bg-primary/10 px-4 py-3 rounded-lg border border-primary/20 shadow-sm">
                     <HandCoins className="h-5 w-5 text-primary" />
                     <div>
-                      <div className="text-[10px] uppercase font-bold text-primary/70 tracking-wider">Dízimo {monthlyFilterYear}</div>
+                      <div className="text-[10px] uppercase font-bold text-primary/70 tracking-wider">Dízimo</div>
                       <div className="text-lg font-headline font-bold text-primary">
                         {currencyFormatter.format(totalMonthlyTithe)}
                       </div>
@@ -186,7 +199,7 @@ export default function HistoryPage() {
               <CardContent className="p-0">
                 {groupedEntries.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground px-4">
-                    Nenhum registro encontrado para {monthlyFilterYear}.
+                    Nenhum registro encontrado para {monthlyFilterYear === "all" ? "o período selecionado" : monthlyFilterYear}.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -284,7 +297,7 @@ export default function HistoryPage() {
                   <CardTitle className="font-headline text-lg">Últimos Registros</CardTitle>
                   <CardDescription className="text-xs">Lançamentos individuais detalhados.</CardDescription>
                 </div>
-                <Select value={recentFilterMonth} onValueChange={setRecentFilterMonth}>
+                <Select value={recentFilterMonth} onValueChange={(val) => { setRecentFilterMonth(val); setShowAllRecent(false); }}>
                   <SelectTrigger className="w-full h-9 text-xs">
                     <div className="flex items-center gap-2">
                       <Filter className="h-3 w-3 opacity-50" />
@@ -299,7 +312,7 @@ export default function HistoryPage() {
                   </SelectContent>
                 </Select>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
                 <div className="space-y-3">
                   {filteredRecentEntries.map((entry) => (
                     <div key={entry.id} className="flex justify-between items-center p-3 rounded-lg bg-white border border-border/40 shadow-sm transition-transform hover:scale-[1.02]">
@@ -319,12 +332,22 @@ export default function HistoryPage() {
                       <p className="text-muted-foreground text-sm">Nenhum registro encontrado.</p>
                     </div>
                   )}
-                  {filteredRecentEntries.length > 0 && (
-                    <p className="text-center text-[10px] text-muted-foreground italic pt-2">
-                      {recentFilterMonth === "all" ? "Exibindo os 5 lançamentos mais recentes" : `Exibindo lançamentos de ${availableMonths.find(m => m[0] === recentFilterMonth)?.[1] || ''}`}
-                    </p>
-                  )}
                 </div>
+                {!showAllRecent && entries.length > 5 && (
+                  <Button 
+                    variant="outline" 
+                    className="w-full text-xs font-bold gap-2"
+                    onClick={() => setShowAllRecent(true)}
+                  >
+                    <Eye className="h-3.5 w-3.5" />
+                    Exibir Todo o Histórico
+                  </Button>
+                )}
+                {showAllRecent && (
+                  <p className="text-center text-[10px] text-muted-foreground italic pt-2">
+                    Exibindo todos os registros {recentFilterMonth !== "all" ? `de ${availableMonths.find(m => m[0] === recentFilterMonth)?.[1] || ''}` : ""}
+                  </p>
+                )}
               </CardContent>
             </Card>
           </div>
@@ -336,15 +359,18 @@ export default function HistoryPage() {
             <div className="flex items-center gap-2">
               <TrendingUp className="h-5 w-5 text-accent" />
               <div>
-                <CardTitle className="font-headline text-lg sm:text-xl">Dízimo Anual {annualFilterYear}</CardTitle>
+                <CardTitle className="font-headline text-lg sm:text-xl">
+                  {annualFilterYear === "all" ? "Dízimo Consolidado" : `Dízimo Anual ${annualFilterYear}`}
+                </CardTitle>
                 <CardDescription className="text-xs">Detalhamento por mês</CardDescription>
               </div>
             </div>
             <Select value={annualFilterYear} onValueChange={setAnnualFilterYear}>
-              <SelectTrigger className="w-[110px] h-9 text-xs">
+              <SelectTrigger className="w-[140px] h-9 text-xs">
                 <SelectValue placeholder="Ano" />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">Todo o Histórico</SelectItem>
                 {availableYears.map(year => (
                   <SelectItem key={year} value={year}>{year}</SelectItem>
                 ))}
@@ -380,7 +406,9 @@ export default function HistoryPage() {
               </TableBody>
               <tfoot className="bg-primary/5 border-t-2">
                 <TableRow>
-                  <TableCell className="font-headline font-bold text-primary text-base sm:text-lg">Total do Ano</TableCell>
+                  <TableCell className="font-headline font-bold text-primary text-base sm:text-lg">
+                    {annualFilterYear === "all" ? "Total Histórico" : "Total do Ano"}
+                  </TableCell>
                   <TableCell className="text-right font-headline font-bold text-primary text-base sm:text-lg">
                     {currencyFormatter.format(annualSummary.totalYear)}
                   </TableCell>
