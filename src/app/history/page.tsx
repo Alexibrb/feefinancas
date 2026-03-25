@@ -3,13 +3,15 @@
 
 import { useMemo, useState } from "react";
 import { Navbar } from "@/components/navbar";
-import { useAppStore } from "@/lib/store";
+import { useAppStore, IncomeEntry } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ArrowRightLeft, Filter } from "lucide-react";
+import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const MONTHS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -21,6 +23,7 @@ export default function HistoryPage() {
   const [annualFilterYear, setAnnualFilterYear] = useState(currentYear);
   const [monthlyFilterYear, setMonthlyFilterYear] = useState(currentYear);
   const [recentFilterMonth, setRecentFilterMonth] = useState("all");
+  const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
 
   // Opções para os Selects baseadas nos dados existentes
   const availableYears = useMemo(() => {
@@ -66,7 +69,14 @@ export default function HistoryPage() {
   }, [entries, annualFilterYear]);
 
   const groupedEntries = useMemo(() => {
-    const groups: Record<string, { month: string, year: string, total: number, tithe: number, count: number }> = {};
+    const groups: Record<string, { 
+      month: string, 
+      year: string, 
+      total: number, 
+      tithe: number, 
+      count: number,
+      items: IncomeEntry[] 
+    }> = {};
     
     entries.forEach(entry => {
       const date = parseISO(entry.date);
@@ -75,18 +85,23 @@ export default function HistoryPage() {
       const year = format(date, 'yyyy');
       
       if (!groups[key]) {
-        groups[key] = { month: monthName, year, total: 0, tithe: 0, count: 0 };
+        groups[key] = { month: monthName, year, total: 0, tithe: 0, count: 0, items: [] };
       }
       
       groups[key].total += entry.amount;
       groups[key].tithe = groups[key].total * 0.1;
       groups[key].count += 1;
+      groups[key].items.push(entry);
     });
 
     return Object.entries(groups)
       .filter(([, data]) => data.year === monthlyFilterYear)
       .sort(([a], [b]) => b.localeCompare(a))
-      .map(([key, data]) => ({ key, ...data }));
+      .map(([key, data]) => ({ 
+        key, 
+        ...data,
+        items: data.items.sort((a, b) => b.date.localeCompare(a.date))
+      }));
   }, [entries, monthlyFilterYear]);
 
   const filteredRecentEntries = useMemo(() => {
@@ -99,6 +114,10 @@ export default function HistoryPage() {
   if (!isLoaded || !currentUser) return null;
 
   const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
+  const toggleMonth = (key: string) => {
+    setExpandedMonth(expandedMonth === key ? null : key);
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -212,25 +231,79 @@ export default function HistoryPage() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="text-xs sm:text-sm">Mês/Ano</TableHead>
-                          <TableHead className="hidden sm:table-cell">Lançamentos</TableHead>
+                          <TableHead className="text-center text-xs sm:text-sm">Lançamentos</TableHead>
                           <TableHead className="text-right text-xs sm:text-sm">Total</TableHead>
                           <TableHead className="text-right text-primary font-bold text-xs sm:text-sm">Dízimo</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {groupedEntries.map((group) => (
-                          <TableRow key={group.key} className="hover:bg-muted/50 transition-colors">
-                            <TableCell className="capitalize font-medium text-xs sm:text-sm">
-                              {group.month} {group.year}
-                            </TableCell>
-                            <TableCell className="hidden sm:table-cell text-sm">{group.count} registro(s)</TableCell>
-                            <TableCell className="text-right text-xs sm:text-sm">
-                              {currencyFormatter.format(group.total)}
-                            </TableCell>
-                            <TableCell className="text-right font-headline font-bold text-primary text-xs sm:text-sm">
-                              {currencyFormatter.format(group.tithe)}
-                            </TableCell>
-                          </TableRow>
+                          <React.Fragment key={group.key}>
+                            <TableRow 
+                              className={cn(
+                                "hover:bg-muted/50 transition-colors cursor-pointer",
+                                expandedMonth === group.key && "bg-muted/30"
+                              )}
+                              onClick={() => toggleMonth(group.key)}
+                            >
+                              <TableCell className="capitalize font-medium text-xs sm:text-sm">
+                                {group.month} {group.year}
+                              </TableCell>
+                              <TableCell className="text-center">
+                                <Button 
+                                  variant="ghost" 
+                                  size="sm" 
+                                  className="h-8 gap-1.5 text-xs sm:text-sm font-normal"
+                                >
+                                  <span className="font-bold text-primary">{group.count}</span>
+                                  {expandedMonth === group.key ? (
+                                    <ChevronUp className="h-3.5 w-3.5 opacity-50" />
+                                  ) : (
+                                    <ChevronDown className="h-3.5 w-3.5 opacity-50" />
+                                  )}
+                                </Button>
+                              </TableCell>
+                              <TableCell className="text-right text-xs sm:text-sm">
+                                {currencyFormatter.format(group.total)}
+                              </TableCell>
+                              <TableCell className="text-right font-headline font-bold text-primary text-xs sm:text-sm">
+                                {currencyFormatter.format(group.tithe)}
+                              </TableCell>
+                            </TableRow>
+                            {expandedMonth === group.key && (
+                              <TableRow className="bg-muted/10">
+                                <TableCell colSpan={4} className="p-0">
+                                  <div className="px-4 py-3 border-t border-b border-border/40 animate-in slide-in-from-top-1 duration-200">
+                                    <div className="flex items-center gap-2 mb-2 text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">
+                                      <Info className="h-3 w-3" />
+                                      Detalhes das Entradas de {group.month}
+                                    </div>
+                                    <div className="space-y-2">
+                                      {group.items.map((item) => (
+                                        <div 
+                                          key={item.id} 
+                                          className="flex justify-between items-center p-2 rounded bg-white/80 border border-border/30 text-xs shadow-sm"
+                                        >
+                                          <div className="flex flex-col">
+                                            <span className="font-medium text-primary">{item.description}</span>
+                                            <span className="text-[10px] text-muted-foreground">
+                                              {format(parseISO(item.date), 'dd/MM/yyyy')}
+                                            </span>
+                                          </div>
+                                          <div className="flex flex-col items-end">
+                                            <span className="font-bold">{currencyFormatter.format(item.amount)}</span>
+                                            <span className="text-[9px] text-accent font-medium">
+                                              Dízimo: {currencyFormatter.format(item.amount * 0.1)}
+                                            </span>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            )}
+                          </React.Fragment>
                         ))}
                       </TableBody>
                     </Table>
