@@ -90,7 +90,8 @@ export default function HistoryPage() {
   }, [entries, monthlyFilterYear]);
 
   const filteredRecentEntries = useMemo(() => {
-    return entries
+    return [...entries]
+      .sort((a, b) => b.date.localeCompare(a.date))
       .filter(e => recentFilterMonth === "all" || format(parseISO(e.date), 'yyyy-MM') === recentFilterMonth)
       .slice(0, 5);
   }, [entries, recentFilterMonth]);
