@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp } from "lucide-react";
+import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -105,6 +105,11 @@ export default function HistoryPage() {
       }));
   }, [entries, monthlyFilterYear]);
 
+  // Cálculo do dízimo total para o ano selecionado no resumo mensal
+  const totalMonthlyTithe = useMemo(() => {
+    return groupedEntries.reduce((sum, group) => sum + group.tithe, 0);
+  }, [groupedEntries]);
+
   const filteredRecentEntries = useMemo(() => {
     return [...entries]
       .sort((a, b) => b.date.localeCompare(a.date))
@@ -134,24 +139,36 @@ export default function HistoryPage() {
         <div className="grid gap-6 lg:grid-cols-3 mb-8">
           {/* Resumo Mensal */}
           <div className="lg:col-span-2">
-            <Card className="shadow-lg border-border/50 h-full">
-              <CardHeader className="flex flex-row items-center justify-between">
-                <div>
-                  <CardTitle className="font-headline text-lg sm:text-xl">Resumo Mensal de Entradas</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Consolidado por período.</CardDescription>
+            <Card className="shadow-lg border-border/50 h-full overflow-hidden">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b bg-muted/20">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="font-headline text-lg sm:text-xl">Resumo Mensal de Entradas</CardTitle>
+                    <Select value={monthlyFilterYear} onValueChange={setMonthlyFilterYear}>
+                      <SelectTrigger className="w-[110px] h-9 text-xs">
+                        <SelectValue placeholder="Ano" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableYears.map(year => (
+                          <SelectItem key={year} value={year}>{year}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <CardDescription className="text-xs sm:text-sm mt-1">Consolidado por período anual.</CardDescription>
                 </div>
-                <Select value={monthlyFilterYear} onValueChange={setMonthlyFilterYear}>
-                  <SelectTrigger className="w-[110px] h-9 text-xs">
-                    <SelectValue placeholder="Ano" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {availableYears.map(year => (
-                      <SelectItem key={year} value={year}>{year}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                
+                <div className="flex items-center gap-3 bg-primary/10 px-4 py-3 rounded-lg border border-primary/20">
+                  <HandCoins className="h-5 w-5 text-primary" />
+                  <div>
+                    <div className="text-[10px] uppercase font-bold text-primary/70 tracking-wider">Total Dízimo {monthlyFilterYear}</div>
+                    <div className="text-xl font-headline font-bold text-primary">
+                      {currencyFormatter.format(totalMonthlyTithe)}
+                    </div>
+                  </div>
+                </div>
               </CardHeader>
-              <CardContent className="p-0 sm:p-6">
+              <CardContent className="p-0">
                 {groupedEntries.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground px-4">
                     Nenhum registro encontrado para {monthlyFilterYear}.
@@ -159,7 +176,7 @@ export default function HistoryPage() {
                 ) : (
                   <div className="overflow-x-auto">
                     <Table>
-                      <TableHeader>
+                      <TableHeader className="bg-muted/10">
                         <TableRow>
                           <TableHead className="text-xs sm:text-sm">Mês/Ano</TableHead>
                           <TableHead className="text-center text-xs sm:text-sm">Lançamentos</TableHead>
