@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useMemo } from "react";
@@ -9,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarDays, ArrowRightLeft } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 const MONTHS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -83,7 +83,7 @@ export default function HistoryPage() {
               <CardTitle className="font-headline text-lg sm:text-xl">Dízimo Anual</CardTitle>
             </div>
             <div className="flex items-center gap-2 text-xs text-muted-foreground sm:hidden italic">
-              <ArrowRightLeft className="h-3 w-3" /> Deslize para ver mais
+              <ArrowRightLeft className="h-3 w-3" /> Deslize para ver os meses
             </div>
           </CardHeader>
           <CardContent className="p-0">
@@ -93,20 +93,20 @@ export default function HistoryPage() {
               </div>
             ) : (
               <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted">
-                <Table>
+                <Table className="border-separate border-spacing-0">
                   <TableHeader>
-                    <TableRow>
-                      <TableHead className="bg-muted/30 sticky left-0 z-10">Ano</TableHead>
+                    <TableRow className="hover:bg-transparent">
+                      <TableHead className="bg-muted/30 sticky left-0 z-20 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Ano</TableHead>
                       {MONTHS_SHORT.map(m => (
-                        <TableHead key={m} className="text-center min-w-[70px] sm:min-w-[80px] text-[10px] sm:text-xs font-bold uppercase">{m}</TableHead>
+                        <TableHead key={m} className="text-center min-w-[70px] sm:min-w-[90px] text-[10px] sm:text-xs font-bold uppercase">{m}</TableHead>
                       ))}
-                      <TableHead className="text-right bg-primary/5 font-bold text-primary min-w-[100px]">Total Ano</TableHead>
+                      <TableHead className="text-right bg-primary/10 font-bold text-primary min-w-[110px] sticky right-0 z-20 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Total Ano</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {annualSummary.map((yearRow) => (
                       <TableRow key={yearRow.year} className="hover:bg-muted/30 transition-colors">
-                        <TableCell className="font-bold bg-muted/10 sticky left-0 z-10">{yearRow.year}</TableCell>
+                        <TableCell className="font-bold bg-white sticky left-0 z-10 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">{yearRow.year}</TableCell>
                         {yearRow.months.map((tithe, idx) => (
                           <TableCell key={idx} className="text-center text-[10px] sm:text-xs px-1 sm:px-4">
                             {tithe > 0 ? (
@@ -118,7 +118,7 @@ export default function HistoryPage() {
                             )}
                           </TableCell>
                         ))}
-                        <TableCell className="text-right font-headline font-bold text-primary bg-primary/5">
+                        <TableCell className="text-right font-headline font-bold text-primary bg-primary/5 sticky right-0 z-10 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">
                           {currencyFormatter.format(yearRow.totalYear)}
                         </TableCell>
                       </TableRow>
