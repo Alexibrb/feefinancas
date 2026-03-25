@@ -1,3 +1,16 @@
 {
-  "placeholderImages": []
+  "placeholderImages": [
+    {
+      "id": "hero-church",
+      "description": "A peaceful church or nature scene representing growth and faith",
+      "imageUrl": "https://picsum.photos/seed/church-1/1200/800",
+      "imageHint": "church nature"
+    },
+    {
+      "id": "financial-growth",
+      "description": "Green leaves growing out of coins or soil, representing financial stewardship",
+      "imageUrl": "https://picsum.photos/seed/finance-growth/600/400",
+      "imageHint": "finance growth"
+    }
+  ]
 }
