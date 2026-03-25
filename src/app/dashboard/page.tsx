@@ -1,24 +1,52 @@
-
 "use client";
 
 import { useState } from "react";
 import { Navbar } from "@/components/navbar";
-import { useAppStore } from "@/lib/store";
+import { useAppStore, IncomeEntry } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wallet, TrendingUp, HandCoins, Plus, Calendar as CalendarIcon } from "lucide-react";
+import { Wallet, TrendingUp, HandCoins, Plus, Calendar as CalendarIcon, Pencil, Trash2 } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function Dashboard() {
-  const { currentUser, addEntry, entries, isLoaded } = useAppStore();
+  const { currentUser, addEntry, updateEntry, deleteEntry, entries, isLoaded } = useAppStore();
   const { toast } = useToast();
+  
+  // States for Adding
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  // States for Editing
+  const [editingEntry, setEditingEntry] = useState<IncomeEntry | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState("");
+
+  // States for Deleting
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
   if (!isLoaded) return null;
   if (!currentUser) return null;
@@ -50,6 +78,44 @@ export default function Dashboard() {
     toast({
       title: "Sucesso!",
       description: "Entrada registrada com sucesso.",
+    });
+  };
+
+  const handleOpenEdit = (entry: IncomeEntry) => {
+    setEditingEntry(entry);
+    setEditAmount(entry.amount.toString());
+    setEditDescription(entry.description);
+    setEditDate(entry.date);
+  };
+
+  const handleUpdateIncome = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEntry) return;
+    
+    if (!editAmount || parseFloat(editAmount) <= 0) {
+      toast({
+        title: "Erro no valor",
+        description: "Por favor, insira um valor válido.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    updateEntry(editingEntry.id, parseFloat(editAmount), editDescription, editDate);
+    setEditingEntry(null);
+    toast({
+      title: "Sucesso!",
+      description: "Entrada atualizada com sucesso.",
+    });
+  };
+
+  const handleDeleteIncome = () => {
+    if (!deletingEntryId) return;
+    deleteEntry(deletingEntryId);
+    setDeletingEntryId(null);
+    toast({
+      title: "Excluído",
+      description: "A entrada foi removida com sucesso.",
     });
   };
 
@@ -191,15 +257,35 @@ export default function Dashboard() {
               ) : (
                 <div className="divide-y divide-border">
                   {monthEntries.slice(0, 6).map((entry) => (
-                    <div key={entry.id} className="p-4 flex justify-between items-center hover:bg-muted/30 transition-colors">
+                    <div key={entry.id} className="p-4 flex justify-between items-center hover:bg-muted/30 transition-colors group">
                       <div className="min-w-0 flex-1">
                         <div className="font-medium text-primary text-sm sm:text-base truncate pr-2">{entry.description}</div>
                         <div className="text-xs text-muted-foreground">
                           {format(new Date(entry.date), 'dd/MM/yyyy', { locale: ptBR })}
                         </div>
                       </div>
-                      <div className="font-headline font-bold text-primary text-base sm:text-lg whitespace-nowrap">
-                        {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(entry.amount)}
+                      <div className="flex items-center gap-4">
+                        <div className="font-headline font-bold text-primary text-base sm:text-lg whitespace-nowrap">
+                          {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(entry.amount)}
+                        </div>
+                        <div className="flex gap-1">
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-primary"
+                            onClick={() => handleOpenEdit(entry)}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="ghost" 
+                            size="icon" 
+                            className="h-8 w-8 text-muted-foreground hover:text-destructive"
+                            onClick={() => setDeletingEntryId(entry.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </div>
                   ))}
@@ -216,6 +302,73 @@ export default function Dashboard() {
           </Card>
         </div>
       </main>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Entrada</DialogTitle>
+            <DialogDescription>
+              Altere os detalhes do lançamento financeiro.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateIncome} className="space-y-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-amount">Valor (R$)</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                step="0.01"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">Descrição</Label>
+              <Input
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-date">Data</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                required
+              />
+            </div>
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setEditingEntry(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar Alterações</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Alert */}
+      <AlertDialog open={!!deletingEntryId} onOpenChange={(open) => !open && setDeletingEntryId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente o registro de entrada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteIncome} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

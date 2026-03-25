@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -30,7 +29,7 @@ export function useAppStore() {
     if (stored) {
       const { user, entries } = JSON.parse(stored);
       setCurrentUser(user);
-      setEntries(entries);
+      setEntries(entries || []);
     }
     const sessionUser = sessionStorage.getItem('current_user');
     if (sessionUser) {
@@ -68,6 +67,16 @@ export function useAppStore() {
     setEntries(prev => [newEntry, ...prev]);
   };
 
+  const updateEntry = (id: string, amount: number, description: string, date: string) => {
+    setEntries(prev => prev.map(entry => 
+      entry.id === id ? { ...entry, amount, description, date } : entry
+    ));
+  };
+
+  const deleteEntry = (id: string) => {
+    setEntries(prev => prev.filter(entry => entry.id !== id));
+  };
+
   const userEntries = entries.filter(e => e.userId === currentUser?.id);
 
   return {
@@ -76,6 +85,8 @@ export function useAppStore() {
     login,
     logout,
     addEntry,
+    updateEntry,
+    deleteEntry,
     isLoaded
   };
 }
