@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays } from "lucide-react";
+import { CalendarDays, ArrowRightLeft } from "lucide-react";
 
 const MONTHS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
@@ -69,20 +69,22 @@ export default function HistoryPage() {
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <header className="mb-8">
-          <h1 className="text-3xl font-headline font-bold text-primary">Histórico de Mordomia</h1>
-          <p className="text-muted-foreground">Consulte o resumo de entradas e dízimos de meses anteriores.</p>
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
+        <header className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-3xl font-headline font-bold text-primary">Histórico de Mordomia</h1>
+          <p className="text-sm sm:text-base text-muted-foreground">Consulte o resumo de entradas e dízimos de meses anteriores.</p>
         </header>
 
         {/* Tabela de Dízimo Anual */}
         <Card className="shadow-lg border-border/50 mb-8 overflow-hidden">
-          <CardHeader className="bg-white/50 border-b">
+          <CardHeader className="bg-white/50 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-accent" />
-              <CardTitle className="font-headline text-xl">Dízimo Anual</CardTitle>
+              <CardTitle className="font-headline text-lg sm:text-xl">Dízimo Anual</CardTitle>
             </div>
-            <CardDescription>Resumo dos dízimos (10%) acumulados por mês em cada ano.</CardDescription>
+            <div className="flex items-center gap-2 text-xs text-muted-foreground sm:hidden italic">
+              <ArrowRightLeft className="h-3 w-3" /> Deslize para ver mais
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             {annualSummary.length === 0 ? (
@@ -90,23 +92,23 @@ export default function HistoryPage() {
                 Nenhum dado anual disponível.
               </div>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted">
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead className="bg-muted/30">Ano</TableHead>
+                      <TableHead className="bg-muted/30 sticky left-0 z-10">Ano</TableHead>
                       {MONTHS_SHORT.map(m => (
-                        <TableHead key={m} className="text-center min-w-[80px] text-xs font-bold uppercase">{m}</TableHead>
+                        <TableHead key={m} className="text-center min-w-[70px] sm:min-w-[80px] text-[10px] sm:text-xs font-bold uppercase">{m}</TableHead>
                       ))}
-                      <TableHead className="text-right bg-primary/5 font-bold text-primary">Total Ano</TableHead>
+                      <TableHead className="text-right bg-primary/5 font-bold text-primary min-w-[100px]">Total Ano</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {annualSummary.map((yearRow) => (
                       <TableRow key={yearRow.year} className="hover:bg-muted/30 transition-colors">
-                        <TableCell className="font-bold bg-muted/10">{yearRow.year}</TableCell>
+                        <TableCell className="font-bold bg-muted/10 sticky left-0 z-10">{yearRow.year}</TableCell>
                         {yearRow.months.map((tithe, idx) => (
-                          <TableCell key={idx} className="text-center text-xs">
+                          <TableCell key={idx} className="text-center text-[10px] sm:text-xs px-1 sm:px-4">
                             {tithe > 0 ? (
                               <span className="font-medium text-primary">
                                 {currencyFormatter.format(tithe).replace('R$', '').trim()}
@@ -128,45 +130,47 @@ export default function HistoryPage() {
           </CardContent>
         </Card>
 
-        <div className="grid gap-8 lg:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-3">
           <div className="lg:col-span-2">
             <Card className="shadow-lg border-border/50">
               <CardHeader>
-                <CardTitle className="font-headline text-xl">Resumo Mensal de Entradas</CardTitle>
-                <CardDescription>Consolidado de todas as entradas registradas por período.</CardDescription>
+                <CardTitle className="font-headline text-lg sm:text-xl">Resumo Mensal de Entradas</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Consolidado de todas as entradas registradas por período.</CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-0 sm:p-6">
                 {groupedEntries.length === 0 ? (
-                  <div className="py-12 text-center text-muted-foreground">
+                  <div className="py-12 text-center text-muted-foreground px-4">
                     Nenhum registro encontrado.
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Mês/Ano</TableHead>
-                        <TableHead>Lançamentos</TableHead>
-                        <TableHead className="text-right">Total Recebido</TableHead>
-                        <TableHead className="text-right text-primary font-bold">Dízimo (10%)</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {groupedEntries.map((group) => (
-                        <TableRow key={group.key} className="hover:bg-muted/50 transition-colors">
-                          <TableCell className="capitalize font-medium">
-                            {group.month} {group.year}
-                          </TableCell>
-                          <TableCell>{group.count} registro(s)</TableCell>
-                          <TableCell className="text-right">
-                            {currencyFormatter.format(group.total)}
-                          </TableCell>
-                          <TableCell className="text-right font-headline font-bold text-primary">
-                            {currencyFormatter.format(group.tithe)}
-                          </TableCell>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="text-xs sm:text-sm">Mês/Ano</TableHead>
+                          <TableHead className="hidden sm:table-cell">Lançamentos</TableHead>
+                          <TableHead className="text-right text-xs sm:text-sm">Total</TableHead>
+                          <TableHead className="text-right text-primary font-bold text-xs sm:text-sm">Dízimo</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {groupedEntries.map((group) => (
+                          <TableRow key={group.key} className="hover:bg-muted/50 transition-colors">
+                            <TableCell className="capitalize font-medium text-xs sm:text-sm">
+                              {group.month} {group.year}
+                            </TableCell>
+                            <TableCell className="hidden sm:table-cell text-sm">{group.count} registro(s)</TableCell>
+                            <TableCell className="text-right text-xs sm:text-sm">
+                              {currencyFormatter.format(group.total)}
+                            </TableCell>
+                            <TableCell className="text-right font-headline font-bold text-primary text-xs sm:text-sm">
+                              {currencyFormatter.format(group.tithe)}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -176,19 +180,19 @@ export default function HistoryPage() {
             <Card className="shadow-md border-border/50 bg-white/50 h-full">
               <CardHeader>
                 <CardTitle className="font-headline text-lg">Últimos Registros</CardTitle>
-                <CardDescription>Detalhamento das entradas individuais.</CardDescription>
+                <CardDescription className="text-xs sm:text-sm">Detalhamento das entradas individuais.</CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="space-y-4">
-                  {entries.slice(0, 10).map((entry) => (
-                    <div key={entry.id} className="flex justify-between items-center p-3 rounded-lg bg-white border border-border/40 shadow-sm">
-                      <div className="flex flex-col">
-                        <span className="text-sm font-medium text-primary line-clamp-1">{entry.description}</span>
-                        <span className="text-xs text-muted-foreground">
+                <div className="space-y-3">
+                  {entries.slice(0, 8).map((entry) => (
+                    <div key={entry.id} className="flex justify-between items-center p-3 rounded-lg bg-white border border-border/40 shadow-sm transition-transform hover:scale-[1.02]">
+                      <div className="flex flex-col min-w-0">
+                        <span className="text-sm font-medium text-primary truncate pr-2">{entry.description}</span>
+                        <span className="text-[10px] sm:text-xs text-muted-foreground">
                           {format(parseISO(entry.date), 'dd/MM/yyyy')}
                         </span>
                       </div>
-                      <span className="font-bold text-sm">
+                      <span className="font-bold text-xs sm:text-sm whitespace-nowrap">
                         {currencyFormatter.format(entry.amount)}
                       </span>
                     </div>
@@ -198,9 +202,9 @@ export default function HistoryPage() {
                       Nenhum registro encontrado.
                     </p>
                   )}
-                  {entries.length > 10 && (
-                    <p className="text-center text-xs text-muted-foreground italic">
-                      Exibindo os 10 registros mais recentes.
+                  {entries.length > 8 && (
+                    <p className="text-center text-[10px] text-muted-foreground italic pt-2">
+                      Exibindo os 8 registros mais recentes.
                     </p>
                   )}
                 </div>
