@@ -1,3 +1,4 @@
+
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -9,10 +10,11 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins, Wallet, Eye, RotateCcw, FileDown } from "lucide-react";
+import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins, Wallet, Eye, RotateCcw, FileDown, CheckCircle2, AlertCircle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
+import { Badge } from "@/components/ui/badge";
 
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -101,6 +103,7 @@ export default function HistoryPage() {
       total: number, 
       tithe: number, 
       count: number,
+      isFullyPaid: boolean,
       items: IncomeEntry[] 
     }> = {};
     
@@ -111,13 +114,14 @@ export default function HistoryPage() {
       const year = format(date, 'yyyy');
       
       if (!groups[key]) {
-        groups[key] = { month: monthName, year, total: 0, tithe: 0, count: 0, items: [] };
+        groups[key] = { month: monthName, year, total: 0, tithe: 0, count: 0, items: [], isFullyPaid: true };
       }
       
       groups[key].total += entry.amount;
       groups[key].tithe = groups[key].total * 0.1;
       groups[key].count += 1;
       groups[key].items.push(entry);
+      if (!entry.isPaid) groups[key].isFullyPaid = false;
     });
 
     return Object.entries(groups)
@@ -157,11 +161,12 @@ export default function HistoryPage() {
       `${g.month} ${g.year}`,
       g.count.toString(),
       currencyFormatter.format(g.total),
-      currencyFormatter.format(g.tithe)
+      currencyFormatter.format(g.tithe),
+      g.isFullyPaid ? "Pago" : "Pendente"
     ]);
 
     autoTable(doc, {
-      head: [['Mês/Ano', 'Lançamentos', 'Total', 'Dízimo']],
+      head: [['Mês/Ano', 'Lançamentos', 'Total', 'Dízimo', 'Status']],
       body: tableData,
       startY: 40,
     });
@@ -177,11 +182,11 @@ export default function HistoryPage() {
       e.description,
       format(parseISO(e.date), 'dd/MM/yyyy'),
       currencyFormatter.format(e.amount),
-      currencyFormatter.format(e.amount * 0.1)
+      e.isPaid ? "Pago" : "Pendente"
     ]);
 
     autoTable(doc, {
-      head: [['Descrição', 'Data', 'Valor', 'Dízimo']],
+      head: [['Descrição', 'Data', 'Valor', 'Status']],
       body: tableData,
       startY: 25,
     });
@@ -221,7 +226,7 @@ export default function HistoryPage() {
         <header className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-headline font-bold text-primary">Histórico de Mordomia</h1>
-            <p className="text-sm sm:text-base text-muted-foreground">Consulte o resumo de entradas e dízimos de meses anteriores.</p>
+            <p className="text-sm sm:text-base text-muted-foreground">Consulte o resumo de entradas e o checkout de dízimos.</p>
           </div>
           {hasActiveFilters && (
             <Button 
@@ -288,7 +293,7 @@ export default function HistoryPage() {
               <CardContent className="p-0">
                 {groupedEntries.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground px-4">
-                    Nenhum registro encontrado para {monthlyFilterYear === "all" ? "o período selecionado" : monthlyFilterYear}.
+                    Nenhum registro encontrado.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -298,6 +303,7 @@ export default function HistoryPage() {
                           <TableHead className="text-xs sm:text-sm">Mês/Ano</TableHead>
                           <TableHead className="text-center text-xs sm:text-sm">Lançamentos</TableHead>
                           <TableHead className="text-right text-xs sm:text-sm">Total</TableHead>
+                          <TableHead className="text-center text-xs sm:text-sm">Status</TableHead>
                           <TableHead className="text-right text-primary font-bold text-xs sm:text-sm">Dízimo</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -331,13 +337,20 @@ export default function HistoryPage() {
                               <TableCell className="text-right text-xs sm:text-sm">
                                 {currencyFormatter.format(group.total)}
                               </TableCell>
+                              <TableCell className="text-center">
+                                {group.isFullyPaid ? (
+                                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Pago</Badge>
+                                ) : (
+                                  <Badge variant="outline" className="text-amber-600 border-amber-200">Pendente</Badge>
+                                )}
+                              </TableCell>
                               <TableCell className="text-right font-headline font-bold text-primary text-xs sm:text-sm">
                                 {currencyFormatter.format(group.tithe)}
                               </TableCell>
                             </TableRow>
                             {expandedMonth === group.key && (
                               <TableRow className="bg-muted/10">
-                                <TableCell colSpan={4} className="p-0">
+                                <TableCell colSpan={5} className="p-0">
                                   <div className="px-4 py-3 border-t border-b border-border/40 animate-in slide-in-from-top-1 duration-200">
                                     <div className="flex items-center gap-2 mb-2 text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">
                                       <Info className="h-3 w-3" />
@@ -347,13 +360,19 @@ export default function HistoryPage() {
                                       {group.items.map((item) => (
                                         <div 
                                           key={item.id} 
-                                          className="flex justify-between items-center p-2 rounded bg-white/80 border border-border/30 text-xs shadow-sm"
+                                          className={cn(
+                                            "flex justify-between items-center p-2 rounded border border-border/30 text-xs shadow-sm",
+                                            item.isPaid ? "bg-emerald-50/50" : "bg-white"
+                                          )}
                                         >
-                                          <div className="flex flex-col">
-                                            <span className="font-medium text-primary">{item.description}</span>
-                                            <span className="text-[10px] text-muted-foreground">
-                                              {format(parseISO(item.date), 'dd/MM/yyyy')}
-                                            </span>
+                                          <div className="flex items-center gap-2">
+                                            {item.isPaid ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
+                                            <div className="flex flex-col">
+                                              <span className="font-medium text-primary">{item.description}</span>
+                                              <span className="text-[10px] text-muted-foreground">
+                                                {format(parseISO(item.date), 'dd/MM/yyyy')}
+                                              </span>
+                                            </div>
                                           </div>
                                           <div className="flex flex-col items-end">
                                             <span className="font-bold">{currencyFormatter.format(item.amount)}</span>
@@ -385,7 +404,7 @@ export default function HistoryPage() {
                 <div className="flex items-center justify-between">
                   <div className="flex flex-col">
                     <CardTitle className="font-headline text-lg">Últimos Registros</CardTitle>
-                    <CardDescription className="text-xs">Lançamentos individuais.</CardDescription>
+                    <CardDescription className="text-xs">Lançamentos e status.</CardDescription>
                   </div>
                   <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" onClick={exportRecentPDF}>
                     <FileDown className="h-4 w-4" />
@@ -409,12 +428,22 @@ export default function HistoryPage() {
               <CardContent className="space-y-4">
                 <div className="space-y-3">
                   {filteredRecentEntries.map((entry) => (
-                    <div key={entry.id} className="flex justify-between items-center p-3 rounded-lg bg-white border border-border/40 shadow-sm transition-transform hover:scale-[1.02]">
+                    <div key={entry.id} className={cn(
+                      "flex justify-between items-center p-3 rounded-lg border border-border/40 shadow-sm transition-transform hover:scale-[1.02]",
+                      entry.isPaid ? "bg-emerald-50" : "bg-white"
+                    )}>
                       <div className="flex flex-col min-w-0">
                         <span className="text-sm font-medium text-primary truncate pr-2">{entry.description}</span>
-                        <span className="text-[10px] sm:text-xs text-muted-foreground">
-                          {format(parseISO(entry.date), 'dd/MM/yyyy')}
-                        </span>
+                        <div className="flex items-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-muted-foreground">
+                            {format(parseISO(entry.date), 'dd/MM/yyyy')}
+                          </span>
+                          {entry.isPaid ? (
+                            <span className="text-[9px] text-emerald-700 font-bold uppercase tracking-tighter">● Pago</span>
+                          ) : (
+                            <span className="text-[9px] text-amber-600 font-bold uppercase tracking-tighter">● Pendente</span>
+                          )}
+                        </div>
                       </div>
                       <span className="font-bold text-xs sm:text-sm whitespace-nowrap">
                         {currencyFormatter.format(entry.amount)}

@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useState, useEffect } from 'react';
@@ -8,6 +9,7 @@ export interface IncomeEntry {
   date: string;
   description: string;
   userId: string;
+  isPaid: boolean;
 }
 
 export interface User {
@@ -16,7 +18,6 @@ export interface User {
   email: string;
 }
 
-// In a real app, this would be an API call
 const STORAGE_KEY = 'fe_financas_data';
 
 export function useAppStore() {
@@ -62,19 +63,35 @@ export function useAppStore() {
       amount,
       description,
       date,
-      userId: currentUser.id
+      userId: currentUser.id,
+      isPaid: false
     };
     setEntries(prev => [newEntry, ...prev]);
   };
 
   const updateEntry = (id: string, amount: number, description: string, date: string) => {
     setEntries(prev => prev.map(entry => 
-      entry.id === id ? { ...entry, amount, description, date } : entry
+      entry.id === id && !entry.isPaid ? { ...entry, amount, description, date } : entry
     ));
   };
 
   const deleteEntry = (id: string) => {
-    setEntries(prev => prev.filter(entry => entry.id !== id));
+    setEntries(prev => prev.filter(entry => entry.id !== id || entry.isPaid));
+  };
+
+  const togglePaidStatus = (id: string) => {
+    setEntries(prev => prev.map(entry => 
+      entry.id === id ? { ...entry, isPaid: !entry.isPaid } : entry
+    ));
+  };
+
+  const markMonthAsPaid = (yearMonth: string) => {
+    setEntries(prev => prev.map(entry => {
+      if (entry.date.startsWith(yearMonth)) {
+        return { ...entry, isPaid: true };
+      }
+      return entry;
+    }));
   };
 
   const userEntries = entries.filter(e => e.userId === currentUser?.id);
@@ -87,6 +104,8 @@ export function useAppStore() {
     addEntry,
     updateEntry,
     deleteEntry,
+    togglePaidStatus,
+    markMonthAsPaid,
     isLoaded
   };
 }
