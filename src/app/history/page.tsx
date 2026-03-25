@@ -9,8 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins, Wallet, Eye, RotateCcw } from "lucide-react";
+import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins, Wallet, Eye, RotateCcw, FileDown } from "lucide-react";
 import { cn } from "@/lib/utils";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
 
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
@@ -25,6 +27,8 @@ export default function HistoryPage() {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [showAllRecent, setShowAllRecent] = useState(false);
 
+  const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+
   // Função para resetar filtros
   const resetFilters = () => {
     setAnnualFilterYear(currentYear);
@@ -34,13 +38,11 @@ export default function HistoryPage() {
     setExpandedMonth(null);
   };
 
-  // Verifica se algum filtro está diferente do padrão para mostrar o botão de reset
   const hasActiveFilters = annualFilterYear !== currentYear || 
                           monthlyFilterYear !== currentYear || 
                           recentFilterMonth !== "all" || 
                           showAllRecent;
 
-  // Opções para os Selects baseadas nos dados existentes
   const availableYears = useMemo(() => {
     const years = new Set<string>();
     entries.forEach(e => years.add(getYear(parseISO(e.date)).toString()));
@@ -128,7 +130,6 @@ export default function HistoryPage() {
       }));
   }, [entries, monthlyFilterYear]);
 
-  // Cálculos totais para o período selecionado no resumo mensal
   const totalMonthlyTithe = useMemo(() => {
     return groupedEntries.reduce((sum, group) => sum + group.tithe, 0);
   }, [groupedEntries]);
@@ -145,9 +146,69 @@ export default function HistoryPage() {
     return showAllRecent ? filtered : filtered.slice(0, 5);
   }, [entries, recentFilterMonth, showAllRecent]);
 
-  if (!isLoaded || !currentUser) return null;
+  // Funções para Exportar PDF
+  const exportMonthlyPDF = () => {
+    const doc = new jsPDF();
+    doc.text(`Resumo Mensal - ${monthlyFilterYear === "all" ? "Histórico Completo" : monthlyFilterYear}`, 14, 15);
+    doc.text(`Total Entradas: ${currencyFormatter.format(totalMonthlyIncome)}`, 14, 25);
+    doc.text(`Total Dízimo: ${currencyFormatter.format(totalMonthlyTithe)}`, 14, 32);
+    
+    const tableData = groupedEntries.map(g => [
+      `${g.month} ${g.year}`,
+      g.count.toString(),
+      currencyFormatter.format(g.total),
+      currencyFormatter.format(g.tithe)
+    ]);
 
-  const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
+    autoTable(doc, {
+      head: [['Mês/Ano', 'Lançamentos', 'Total', 'Dízimo']],
+      body: tableData,
+      startY: 40,
+    });
+
+    doc.save(`resumo-mensal-${monthlyFilterYear}.pdf`);
+  };
+
+  const exportRecentPDF = () => {
+    const doc = new jsPDF();
+    doc.text(`Últimos Registros - ${recentFilterMonth === "all" ? "Todos os Meses" : recentFilterMonth}`, 14, 15);
+    
+    const tableData = filteredRecentEntries.map(e => [
+      e.description,
+      format(parseISO(e.date), 'dd/MM/yyyy'),
+      currencyFormatter.format(e.amount),
+      currencyFormatter.format(e.amount * 0.1)
+    ]);
+
+    autoTable(doc, {
+      head: [['Descrição', 'Data', 'Valor', 'Dízimo']],
+      body: tableData,
+      startY: 25,
+    });
+
+    doc.save(`registros-recentes.pdf`);
+  };
+
+  const exportAnnualPDF = () => {
+    const doc = new jsPDF();
+    doc.text(`Dízimo Anual - ${annualFilterYear === "all" ? "Histórico Completo" : annualFilterYear}`, 14, 15);
+    doc.text(`Total Acumulado: ${currencyFormatter.format(annualSummary.totalYear)}`, 14, 25);
+    
+    const tableData = MONTHS_FULL.map((m, i) => [
+      m,
+      currencyFormatter.format(annualSummary.months[i])
+    ]);
+
+    autoTable(doc, {
+      head: [['Mês', 'Dízimo (10%)']],
+      body: tableData,
+      startY: 35,
+    });
+
+    doc.save(`dizimo-anual-${annualFilterYear}.pdf`);
+  };
+
+  if (!isLoaded || !currentUser) return null;
 
   const toggleMonth = (key: string) => {
     setExpandedMonth(expandedMonth === key ? null : key);
@@ -181,7 +242,7 @@ export default function HistoryPage() {
             <Card className="shadow-lg border-border/50 h-full overflow-hidden">
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b bg-muted/20">
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <CardTitle className="font-headline text-lg sm:text-xl">Resumo Mensal</CardTitle>
                     <Select value={monthlyFilterYear} onValueChange={setMonthlyFilterYear}>
                       <SelectTrigger className="w-[140px] h-9 text-xs">
@@ -194,6 +255,9 @@ export default function HistoryPage() {
                         ))}
                       </SelectContent>
                     </Select>
+                    <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" onClick={exportMonthlyPDF}>
+                      <FileDown className="h-4 w-4" />
+                    </Button>
                   </div>
                   <CardDescription className="text-xs sm:text-sm mt-1">
                     {monthlyFilterYear === "all" ? "Consolidado de todo o período." : `Consolidado do ano ${monthlyFilterYear}.`}
@@ -318,9 +382,14 @@ export default function HistoryPage() {
           <div className="lg:col-span-1">
             <Card className="shadow-md border-border/50 bg-white/50 h-full">
               <CardHeader className="space-y-3">
-                <div className="flex flex-col">
-                  <CardTitle className="font-headline text-lg">Últimos Registros</CardTitle>
-                  <CardDescription className="text-xs">Lançamentos individuais detalhados.</CardDescription>
+                <div className="flex items-center justify-between">
+                  <div className="flex flex-col">
+                    <CardTitle className="font-headline text-lg">Últimos Registros</CardTitle>
+                    <CardDescription className="text-xs">Lançamentos individuais.</CardDescription>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" onClick={exportRecentPDF}>
+                    <FileDown className="h-4 w-4" />
+                  </Button>
                 </div>
                 <Select value={recentFilterMonth} onValueChange={(val) => { setRecentFilterMonth(val); setShowAllRecent(false); }}>
                   <SelectTrigger className="w-full h-9 text-xs">
@@ -368,11 +437,6 @@ export default function HistoryPage() {
                     Exibir Todo o Histórico
                   </Button>
                 )}
-                {showAllRecent && (
-                  <p className="text-center text-[10px] text-muted-foreground italic pt-2">
-                    Exibindo todos os registros {recentFilterMonth !== "all" ? `de ${availableMonths.find(m => m[0] === recentFilterMonth)?.[1] || ''}` : ""}
-                  </p>
-                )}
               </CardContent>
             </Card>
           </div>
@@ -390,17 +454,22 @@ export default function HistoryPage() {
                 <CardDescription className="text-xs">Detalhamento por mês</CardDescription>
               </div>
             </div>
-            <Select value={annualFilterYear} onValueChange={setAnnualFilterYear}>
-              <SelectTrigger className="w-[140px] h-9 text-xs">
-                <SelectValue placeholder="Ano" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todo o Histórico</SelectItem>
-                {availableYears.map(year => (
-                  <SelectItem key={year} value={year}>{year}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex items-center gap-2">
+              <Select value={annualFilterYear} onValueChange={setAnnualFilterYear}>
+                <SelectTrigger className="w-[140px] h-9 text-xs">
+                  <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo o Histórico</SelectItem>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button variant="ghost" size="icon" className="h-9 w-9 text-primary" onClick={exportAnnualPDF}>
+                <FileDown className="h-4 w-4" />
+              </Button>
+            </div>
           </CardHeader>
           <CardContent className="p-0">
             <Table>
