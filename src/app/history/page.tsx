@@ -10,10 +10,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info } from "lucide-react";
+import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const MONTHS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
+const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 export default function HistoryPage() {
   const { entries, currentUser, isLoaded } = useAppStore();
@@ -59,13 +59,14 @@ export default function HistoryPage() {
       years[year][monthIndex] += (entry.amount * 0.1);
     });
 
-    return Object.entries(years)
-      .filter(([year]) => year === annualFilterYear)
-      .map(([year, months]) => ({
-        year,
-        months,
-        totalYear: months.reduce((sum, val) => sum + val, 0)
-      }));
+    const selectedYearData = years[annualFilterYear] || new Array(12).fill(0);
+    const totalYear = selectedYearData.reduce((sum, val) => sum + val, 0);
+
+    return {
+      year: annualFilterYear,
+      months: selectedYearData,
+      totalYear
+    };
   }, [entries, annualFilterYear]);
 
   const groupedEntries = useMemo(() => {
@@ -130,77 +131,7 @@ export default function HistoryPage() {
           </div>
         </header>
 
-        {/* Tabela de Dízimo Anual */}
-        <Card className="shadow-lg border-border/50 mb-8 overflow-hidden">
-          <CardHeader className="bg-white/50 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-2">
-              <CalendarDays className="h-5 w-5 text-accent" />
-              <div>
-                <CardTitle className="font-headline text-lg sm:text-xl">Dízimo Anual</CardTitle>
-                <CardDescription className="text-xs">Detalhamento mensal das contribuições</CardDescription>
-              </div>
-            </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 text-xs text-muted-foreground mr-4 hidden md:flex italic">
-                <ArrowRightLeft className="h-3 w-3" /> Deslize para ver os meses
-              </div>
-              <Select value={annualFilterYear} onValueChange={setAnnualFilterYear}>
-                <SelectTrigger className="w-[120px] h-9 text-xs">
-                  <SelectValue placeholder="Ano" />
-                </SelectTrigger>
-                <SelectContent>
-                  {availableYears.map(year => (
-                    <SelectItem key={year} value={year}>{year}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </CardHeader>
-          <CardContent className="p-0">
-            {annualSummary.length === 0 ? (
-              <div className="py-12 text-center text-muted-foreground">
-                Nenhum dado disponível para o ano de {annualFilterYear}.
-              </div>
-            ) : (
-              <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted">
-                <Table className="border-separate border-spacing-0">
-                  <TableHeader>
-                    <TableRow className="hover:bg-transparent">
-                      <TableHead className="bg-muted/30 sticky left-0 z-20 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.1)]">Ano</TableHead>
-                      {MONTHS_SHORT.map(m => (
-                        <TableHead key={m} className="text-center min-w-[70px] sm:min-w-[90px] text-[10px] sm:text-xs font-bold uppercase">{m}</TableHead>
-                      ))}
-                      <TableHead className="text-right bg-primary/10 font-bold text-primary min-w-[110px] sticky right-0 z-20 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.1)]">Total Ano</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {annualSummary.map((yearRow) => (
-                      <TableRow key={yearRow.year} className="hover:bg-muted/30 transition-colors">
-                        <TableCell className="font-bold bg-white sticky left-0 z-10 border-r shadow-[2px_0_5px_-2px_rgba(0,0,0,0.05)]">{yearRow.year}</TableCell>
-                        {yearRow.months.map((tithe, idx) => (
-                          <TableCell key={idx} className="text-center text-[10px] sm:text-xs px-1 sm:px-4">
-                            {tithe > 0 ? (
-                              <span className="font-medium text-primary">
-                                {currencyFormatter.format(tithe).replace('R$', '').trim()}
-                              </span>
-                            ) : (
-                              <span className="text-muted-foreground opacity-30">-</span>
-                            )}
-                          </TableCell>
-                        ))}
-                        <TableCell className="text-right font-headline font-bold text-primary bg-primary/5 sticky right-0 z-10 border-l shadow-[-2px_0_5px_-2px_rgba(0,0,0,0.05)]">
-                          {currencyFormatter.format(yearRow.totalYear)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-6 lg:grid-cols-3">
+        <div className="grid gap-6 lg:grid-cols-3 mb-8">
           {/* Resumo Mensal */}
           <div className="lg:col-span-2">
             <Card className="shadow-lg border-border/50 h-full">
@@ -366,6 +297,66 @@ export default function HistoryPage() {
             </Card>
           </div>
         </div>
+
+        {/* Detalhamento de Dízimo Anual (Vertical) */}
+        <Card className="shadow-lg border-border/50 overflow-hidden max-w-2xl mx-auto">
+          <CardHeader className="bg-white/50 border-b flex flex-row items-center justify-between">
+            <div className="flex items-center gap-2">
+              <TrendingUp className="h-5 w-5 text-accent" />
+              <div>
+                <CardTitle className="font-headline text-lg sm:text-xl">Dízimo Anual {annualFilterYear}</CardTitle>
+                <CardDescription className="text-xs">Detalhamento por mês</CardDescription>
+              </div>
+            </div>
+            <Select value={annualFilterYear} onValueChange={setAnnualFilterYear}>
+              <SelectTrigger className="w-[110px] h-9 text-xs">
+                <SelectValue placeholder="Ano" />
+              </SelectTrigger>
+              <SelectContent>
+                {availableYears.map(year => (
+                  <SelectItem key={year} value={year}>{year}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </CardHeader>
+          <CardContent className="p-0">
+            <Table>
+              <TableHeader className="bg-muted/30">
+                <TableRow>
+                  <TableHead className="font-bold">Mês</TableHead>
+                  <TableHead className="text-right font-bold">Dízimo (10%)</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {MONTHS_FULL.map((monthName, index) => {
+                  const tithe = annualSummary.months[index];
+                  return (
+                    <TableRow key={monthName} className="hover:bg-muted/20">
+                      <TableCell className="font-medium text-sm sm:text-base">{monthName}</TableCell>
+                      <TableCell className="text-right font-headline text-sm sm:text-base">
+                        {tithe > 0 ? (
+                          <span className="text-primary font-bold">
+                            {currencyFormatter.format(tithe)}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground opacity-30">R$ 0,00</span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+              <tfoot className="bg-primary/5 border-t-2">
+                <TableRow>
+                  <TableCell className="font-headline font-bold text-primary text-base sm:text-lg">Total do Ano</TableCell>
+                  <TableCell className="text-right font-headline font-bold text-primary text-base sm:text-lg">
+                    {currencyFormatter.format(annualSummary.totalYear)}
+                  </TableCell>
+                </TableRow>
+              </tfoot>
+            </Table>
+          </CardContent>
+        </Card>
       </main>
     </div>
   );
