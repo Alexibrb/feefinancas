@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins } from "lucide-react";
+import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins, Wallet } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
@@ -105,9 +105,13 @@ export default function HistoryPage() {
       }));
   }, [entries, monthlyFilterYear]);
 
-  // Cálculo do dízimo total para o ano selecionado no resumo mensal
+  // Cálculos totais para o ano selecionado no resumo mensal
   const totalMonthlyTithe = useMemo(() => {
     return groupedEntries.reduce((sum, group) => sum + group.tithe, 0);
+  }, [groupedEntries]);
+
+  const totalMonthlyIncome = useMemo(() => {
+    return groupedEntries.reduce((sum, group) => sum + group.total, 0);
   }, [groupedEntries]);
 
   const filteredRecentEntries = useMemo(() => {
@@ -143,7 +147,7 @@ export default function HistoryPage() {
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b bg-muted/20">
                 <div className="flex-1">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="font-headline text-lg sm:text-xl">Resumo Mensal de Entradas</CardTitle>
+                    <CardTitle className="font-headline text-lg sm:text-xl">Resumo Mensal</CardTitle>
                     <Select value={monthlyFilterYear} onValueChange={setMonthlyFilterYear}>
                       <SelectTrigger className="w-[110px] h-9 text-xs">
                         <SelectValue placeholder="Ano" />
@@ -155,15 +159,26 @@ export default function HistoryPage() {
                       </SelectContent>
                     </Select>
                   </div>
-                  <CardDescription className="text-xs sm:text-sm mt-1">Consolidado por período anual.</CardDescription>
+                  <CardDescription className="text-xs sm:text-sm mt-1">Consolidado do ano {monthlyFilterYear}.</CardDescription>
                 </div>
                 
-                <div className="flex items-center gap-3 bg-primary/10 px-4 py-3 rounded-lg border border-primary/20">
-                  <HandCoins className="h-5 w-5 text-primary" />
-                  <div>
-                    <div className="text-[10px] uppercase font-bold text-primary/70 tracking-wider">Total Dízimo {monthlyFilterYear}</div>
-                    <div className="text-xl font-headline font-bold text-primary">
-                      {currencyFormatter.format(totalMonthlyTithe)}
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-3 bg-white px-4 py-3 rounded-lg border border-border shadow-sm">
+                    <Wallet className="h-5 w-5 text-muted-foreground" />
+                    <div>
+                      <div className="text-[10px] uppercase font-bold text-muted-foreground/70 tracking-wider">Entradas {monthlyFilterYear}</div>
+                      <div className="text-lg font-headline font-bold text-foreground">
+                        {currencyFormatter.format(totalMonthlyIncome)}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 bg-primary/10 px-4 py-3 rounded-lg border border-primary/20 shadow-sm">
+                    <HandCoins className="h-5 w-5 text-primary" />
+                    <div>
+                      <div className="text-[10px] uppercase font-bold text-primary/70 tracking-wider">Dízimo {monthlyFilterYear}</div>
+                      <div className="text-lg font-headline font-bold text-primary">
+                        {currencyFormatter.format(totalMonthlyTithe)}
+                      </div>
                     </div>
                   </div>
                 </div>
