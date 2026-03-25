@@ -10,16 +10,35 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Button } from "@/components/ui/button";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ArrowRightLeft, Filter, ChevronDown, ChevronUp, Info, TrendingUp, HandCoins, Wallet, Eye, RotateCcw, FileDown, CheckCircle2, AlertCircle } from "lucide-react";
+import { 
+  CalendarDays, 
+  ArrowRightLeft, 
+  Filter, 
+  ChevronDown, 
+  ChevronUp, 
+  Info, 
+  TrendingUp, 
+  HandCoins, 
+  Wallet, 
+  Eye, 
+  RotateCcw, 
+  FileDown, 
+  CheckCircle2, 
+  AlertCircle,
+  Circle,
+  Check
+} from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 export default function HistoryPage() {
-  const { entries, currentUser, isLoaded } = useAppStore();
+  const { entries, currentUser, isLoaded, togglePaidStatus, markMonthAsPaid } = useAppStore();
+  const { toast } = useToast();
   const currentYear = new Date().getFullYear().toString();
 
   // Estados dos Filtros
@@ -149,6 +168,25 @@ export default function HistoryPage() {
     
     return showAllRecent ? filtered : filtered.slice(0, 5);
   }, [entries, recentFilterMonth, showAllRecent]);
+
+  // Ações de Checkout
+  const handleToggleEntryPaid = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    togglePaidStatus(id);
+    toast({
+      title: "Status Atualizado",
+      description: "O status da entrada foi alterado.",
+    });
+  };
+
+  const handleMarkMonthAsPaidAction = (e: React.MouseEvent, key: string) => {
+    e.stopPropagation();
+    markMonthAsPaid(key);
+    toast({
+      title: "Mês Confirmado",
+      description: "Todas as entradas do mês foram marcadas como pagas.",
+    });
+  };
 
   // Funções para Exportar PDF
   const exportMonthlyPDF = () => {
@@ -338,11 +376,20 @@ export default function HistoryPage() {
                                 {currencyFormatter.format(group.total)}
                               </TableCell>
                               <TableCell className="text-center">
-                                {group.isFullyPaid ? (
-                                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Pago</Badge>
-                                ) : (
-                                  <Badge variant="outline" className="text-amber-600 border-amber-200">Pendente</Badge>
-                                )}
+                                <div className="flex items-center justify-center gap-2">
+                                  {group.isFullyPaid ? (
+                                    <Badge variant="secondary" className="bg-emerald-100 text-emerald-800 hover:bg-emerald-100">Pago</Badge>
+                                  ) : (
+                                    <Button 
+                                      size="sm" 
+                                      variant="outline" 
+                                      className="h-7 text-[10px] px-2 border-amber-200 text-amber-600 hover:bg-amber-50"
+                                      onClick={(e) => handleMarkMonthAsPaidAction(e, group.key)}
+                                    >
+                                      Checkout
+                                    </Button>
+                                  )}
+                                </div>
                               </TableCell>
                               <TableCell className="text-right font-headline font-bold text-primary text-xs sm:text-sm">
                                 {currencyFormatter.format(group.tithe)}
@@ -366,7 +413,15 @@ export default function HistoryPage() {
                                           )}
                                         >
                                           <div className="flex items-center gap-2">
-                                            {item.isPaid ? <CheckCircle2 className="h-4 w-4 text-emerald-600" /> : <AlertCircle className="h-4 w-4 text-amber-500" />}
+                                            <button 
+                                              onClick={(e) => handleToggleEntryPaid(e, item.id)}
+                                              className={cn(
+                                                "transition-colors",
+                                                item.isPaid ? "text-emerald-600" : "text-muted-foreground/30 hover:text-primary"
+                                              )}
+                                            >
+                                              {item.isPaid ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
+                                            </button>
                                             <div className="flex flex-col">
                                               <span className="font-medium text-primary">{item.description}</span>
                                               <span className="text-[10px] text-muted-foreground">
@@ -438,11 +493,15 @@ export default function HistoryPage() {
                           <span className="text-[10px] text-muted-foreground">
                             {format(parseISO(entry.date), 'dd/MM/yyyy')}
                           </span>
-                          {entry.isPaid ? (
-                            <span className="text-[9px] text-emerald-700 font-bold uppercase tracking-tighter">● Pago</span>
-                          ) : (
-                            <span className="text-[9px] text-amber-600 font-bold uppercase tracking-tighter">● Pendente</span>
-                          )}
+                          <button 
+                            onClick={(e) => handleToggleEntryPaid(e, entry.id)}
+                            className={cn(
+                              "text-[9px] font-bold uppercase tracking-tighter",
+                              entry.isPaid ? "text-emerald-700" : "text-amber-600"
+                            )}
+                          >
+                            ● {entry.isPaid ? "Pago" : "Pendente"}
+                          </button>
                         </div>
                       </div>
                       <span className="font-bold text-xs sm:text-sm whitespace-nowrap">
