@@ -4,7 +4,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
-import { Leaf, LayoutDashboard, History, Sparkles, LogOut } from "lucide-react";
+import { Leaf, LayoutDashboard, History, LogOut } from "lucide-react";
 import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
 
@@ -23,7 +23,6 @@ export function Navbar() {
   const navItems = [
     { label: "Painel", href: "/dashboard", icon: LayoutDashboard },
     { label: "Histórico", href: "/history", icon: History },
-    { label: "Reflexão", href: "/reflection", icon: Sparkles },
   ];
 
   return (
