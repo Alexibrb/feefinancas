@@ -1,19 +1,45 @@
+
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { Navbar } from "@/components/navbar";
 import { useAppStore } from "@/lib/store";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarDays, ArrowRightLeft } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { CalendarDays, ArrowRightLeft, Filter } from "lucide-react";
 
 const MONTHS_SHORT = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 export default function HistoryPage() {
   const { entries, currentUser, isLoaded } = useAppStore();
+  const currentYear = new Date().getFullYear().toString();
+
+  // Estados dos Filtros
+  const [annualFilterYear, setAnnualFilterYear] = useState(currentYear);
+  const [monthlyFilterYear, setMonthlyFilterYear] = useState(currentYear);
+  const [recentFilterMonth, setRecentFilterMonth] = useState("all");
+
+  // Opções para os Selects baseadas nos dados existentes
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    entries.forEach(e => years.add(getYear(parseISO(e.date)).toString()));
+    if (years.size === 0) years.add(currentYear);
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [entries, currentYear]);
+
+  const availableMonths = useMemo(() => {
+    const monthsMap = new Map<string, string>();
+    entries.forEach(e => {
+      const d = parseISO(e.date);
+      const key = format(d, 'yyyy-MM');
+      const label = format(d, 'MMMM yyyy', { locale: ptBR });
+      monthsMap.set(key, label);
+    });
+    return Array.from(monthsMap.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [entries]);
 
   const annualSummary = useMemo(() => {
     const years: Record<string, number[]> = {};
@@ -31,13 +57,13 @@ export default function HistoryPage() {
     });
 
     return Object.entries(years)
-      .sort(([a], [b]) => b.localeCompare(a))
+      .filter(([year]) => year === annualFilterYear)
       .map(([year, months]) => ({
         year,
         months,
         totalYear: months.reduce((sum, val) => sum + val, 0)
       }));
-  }, [entries]);
+  }, [entries, annualFilterYear]);
 
   const groupedEntries = useMemo(() => {
     const groups: Record<string, { month: string, year: string, total: number, tithe: number, count: number }> = {};
@@ -58,9 +84,16 @@ export default function HistoryPage() {
     });
 
     return Object.entries(groups)
+      .filter(([, data]) => data.year === monthlyFilterYear)
       .sort(([a], [b]) => b.localeCompare(a))
       .map(([key, data]) => ({ key, ...data }));
-  }, [entries]);
+  }, [entries, monthlyFilterYear]);
+
+  const filteredRecentEntries = useMemo(() => {
+    return entries
+      .filter(e => recentFilterMonth === "all" || format(parseISO(e.date), 'yyyy-MM') === recentFilterMonth)
+      .slice(0, 5);
+  }, [entries, recentFilterMonth]);
 
   if (!isLoaded || !currentUser) return null;
 
@@ -70,9 +103,11 @@ export default function HistoryPage() {
     <div className="min-h-screen bg-background">
       <Navbar />
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <header className="mb-6 sm:mb-8">
-          <h1 className="text-2xl sm:text-3xl font-headline font-bold text-primary">Histórico de Mordomia</h1>
-          <p className="text-sm sm:text-base text-muted-foreground">Consulte o resumo de entradas e dízimos de meses anteriores.</p>
+        <header className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-end justify-between gap-4">
+          <div>
+            <h1 className="text-2xl sm:text-3xl font-headline font-bold text-primary">Histórico de Mordomia</h1>
+            <p className="text-sm sm:text-base text-muted-foreground">Consulte o resumo de entradas e dízimos de meses anteriores.</p>
+          </div>
         </header>
 
         {/* Tabela de Dízimo Anual */}
@@ -80,16 +115,31 @@ export default function HistoryPage() {
           <CardHeader className="bg-white/50 border-b flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <CalendarDays className="h-5 w-5 text-accent" />
-              <CardTitle className="font-headline text-lg sm:text-xl">Dízimo Anual</CardTitle>
+              <div>
+                <CardTitle className="font-headline text-lg sm:text-xl">Dízimo Anual</CardTitle>
+                <CardDescription className="text-xs">Detalhamento mensal das contribuições</CardDescription>
+              </div>
             </div>
-            <div className="flex items-center gap-2 text-xs text-muted-foreground sm:hidden italic">
-              <ArrowRightLeft className="h-3 w-3" /> Deslize para ver os meses
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mr-4 hidden md:flex italic">
+                <ArrowRightLeft className="h-3 w-3" /> Deslize para ver os meses
+              </div>
+              <Select value={annualFilterYear} onValueChange={setAnnualFilterYear}>
+                <SelectTrigger className="w-[120px] h-9 text-xs">
+                  <SelectValue placeholder="Ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </CardHeader>
           <CardContent className="p-0">
             {annualSummary.length === 0 ? (
               <div className="py-12 text-center text-muted-foreground">
-                Nenhum dado anual disponível.
+                Nenhum dado disponível para o ano de {annualFilterYear}.
               </div>
             ) : (
               <div className="overflow-x-auto scrollbar-thin scrollbar-thumb-muted">
@@ -131,16 +181,29 @@ export default function HistoryPage() {
         </Card>
 
         <div className="grid gap-6 lg:grid-cols-3">
+          {/* Resumo Mensal */}
           <div className="lg:col-span-2">
-            <Card className="shadow-lg border-border/50">
-              <CardHeader>
-                <CardTitle className="font-headline text-lg sm:text-xl">Resumo Mensal de Entradas</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Consolidado de todas as entradas registradas por período.</CardDescription>
+            <Card className="shadow-lg border-border/50 h-full">
+              <CardHeader className="flex flex-row items-center justify-between">
+                <div>
+                  <CardTitle className="font-headline text-lg sm:text-xl">Resumo Mensal de Entradas</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Consolidado por período.</CardDescription>
+                </div>
+                <Select value={monthlyFilterYear} onValueChange={setMonthlyFilterYear}>
+                  <SelectTrigger className="w-[110px] h-9 text-xs">
+                    <SelectValue placeholder="Ano" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availableYears.map(year => (
+                      <SelectItem key={year} value={year}>{year}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </CardHeader>
               <CardContent className="p-0 sm:p-6">
                 {groupedEntries.length === 0 ? (
                   <div className="py-12 text-center text-muted-foreground px-4">
-                    Nenhum registro encontrado.
+                    Nenhum registro encontrado para {monthlyFilterYear}.
                   </div>
                 ) : (
                   <div className="overflow-x-auto">
@@ -176,15 +239,32 @@ export default function HistoryPage() {
             </Card>
           </div>
 
+          {/* Últimos Registros */}
           <div className="lg:col-span-1">
             <Card className="shadow-md border-border/50 bg-white/50 h-full">
-              <CardHeader>
-                <CardTitle className="font-headline text-lg">Últimos Registros</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Detalhamento das entradas individuais.</CardDescription>
+              <CardHeader className="space-y-3">
+                <div className="flex flex-col">
+                  <CardTitle className="font-headline text-lg">Últimos Registros</CardTitle>
+                  <CardDescription className="text-xs">Lançamentos individuais detalhados.</CardDescription>
+                </div>
+                <Select value={recentFilterMonth} onValueChange={setRecentFilterMonth}>
+                  <SelectTrigger className="w-full h-9 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-3 w-3 opacity-50" />
+                      <SelectValue placeholder="Filtrar por mês" />
+                    </div>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os Meses</SelectItem>
+                    {availableMonths.map(([key, label]) => (
+                      <SelectItem key={key} value={key} className="capitalize">{label}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {entries.slice(0, 8).map((entry) => (
+                  {filteredRecentEntries.map((entry) => (
                     <div key={entry.id} className="flex justify-between items-center p-3 rounded-lg bg-white border border-border/40 shadow-sm transition-transform hover:scale-[1.02]">
                       <div className="flex flex-col min-w-0">
                         <span className="text-sm font-medium text-primary truncate pr-2">{entry.description}</span>
@@ -197,14 +277,14 @@ export default function HistoryPage() {
                       </span>
                     </div>
                   ))}
-                  {entries.length === 0 && (
-                    <p className="text-center py-8 text-muted-foreground text-sm">
-                      Nenhum registro encontrado.
-                    </p>
+                  {filteredRecentEntries.length === 0 && (
+                    <div className="text-center py-12">
+                      <p className="text-muted-foreground text-sm">Nenhum registro encontrado.</p>
+                    </div>
                   )}
-                  {entries.length > 8 && (
+                  {filteredRecentEntries.length > 0 && (
                     <p className="text-center text-[10px] text-muted-foreground italic pt-2">
-                      Exibindo os 8 registros mais recentes.
+                      {recentFilterMonth === "all" ? "Exibindo os 5 lançamentos mais recentes" : `Exibindo lançamentos de ${availableMonths.find(m => m[0] === recentFilterMonth)?.[1] || ''}`}
                     </p>
                   )}
                 </div>
