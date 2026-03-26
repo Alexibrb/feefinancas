@@ -7,15 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
-  CalendarDays, 
-  ArrowRightLeft, 
-  Filter, 
-  ChevronDown, 
-  ChevronUp, 
-  Info, 
   TrendingUp, 
   HandCoins, 
   Wallet, 
@@ -23,20 +19,42 @@ import {
   RotateCcw, 
   FileDown, 
   CheckCircle2, 
-  AlertCircle,
   Circle,
-  Check
+  Pencil,
+  Trash2,
+  ChevronDown,
+  ChevronUp,
+  Filter,
+  Info
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const MONTHS_FULL = ["Janeiro", "Fevereiro", "Março", "Abril", "Maio", "Junho", "Julho", "Agosto", "Setembro", "Outubro", "Novembro", "Dezembro"];
 
 export default function HistoryPage() {
-  const { entries, currentUser, isLoaded, togglePaidStatus, markMonthAsPaid } = useAppStore();
+  const { entries, currentUser, isLoaded, togglePaidStatus, markMonthAsPaid, updateEntry, deleteEntry } = useAppStore();
   const { toast } = useToast();
   const currentYear = new Date().getFullYear().toString();
 
@@ -47,9 +65,17 @@ export default function HistoryPage() {
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [showAllRecent, setShowAllRecent] = useState(false);
 
+  // Estados para Edição
+  const [editingEntry, setEditingEntry] = useState<IncomeEntry | null>(null);
+  const [editAmount, setEditAmount] = useState("");
+  const [editDescription, setEditDescription] = useState("");
+  const [editDate, setEditDate] = useState("");
+
+  // Estado para Exclusão
+  const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+
   const currencyFormatter = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' });
 
-  // Função para resetar filtros
   const resetFilters = () => {
     setAnnualFilterYear(currentYear);
     setMonthlyFilterYear(currentYear);
@@ -194,6 +220,51 @@ export default function HistoryPage() {
     toast({
       title: "Mês Confirmado",
       description: "Deus abençoe sua vida",
+    });
+  };
+
+  // Funções de Edição e Exclusão
+  const handleOpenEdit = (e: React.MouseEvent, entry: IncomeEntry) => {
+    e.stopPropagation();
+    setEditingEntry(entry);
+    setEditAmount(entry.amount.toString());
+    setEditDescription(entry.description);
+    setEditDate(entry.date);
+  };
+
+  const handleUpdateIncome = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingEntry) return;
+    
+    if (!editAmount || parseFloat(editAmount) <= 0) {
+      toast({
+        title: "Erro no valor",
+        description: "Por favor, insira um valor válido.",
+        variant: "destructive"
+      });
+      return;
+    }
+
+    updateEntry(editingEntry.id, parseFloat(editAmount), editDescription, editDate);
+    setEditingEntry(null);
+    toast({
+      title: "Sucesso!",
+      description: "Entrada atualizada com sucesso.",
+    });
+  };
+
+  const handleOpenDelete = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    setDeletingEntryId(id);
+  };
+
+  const handleDeleteIncome = () => {
+    if (!deletingEntryId) return;
+    deleteEntry(deletingEntryId);
+    setDeletingEntryId(null);
+    toast({
+      title: "Excluído",
+      description: "A entrada foi removida com sucesso.",
     });
   };
 
@@ -438,11 +509,33 @@ export default function HistoryPage() {
                                               </span>
                                             </div>
                                           </div>
-                                          <div className="flex flex-col items-end">
-                                            <span className="font-bold">{currencyFormatter.format(item.amount)}</span>
-                                            <span className="text-[9px] text-accent font-medium">
-                                              Dízimo: {currencyFormatter.format(item.amount * 0.1)}
-                                            </span>
+                                          <div className="flex items-center gap-4">
+                                            <div className="flex flex-col items-end">
+                                              <span className="font-bold">{currencyFormatter.format(item.amount)}</span>
+                                              <span className="text-[9px] text-accent font-medium">
+                                                Dízimo: {currencyFormatter.format(item.amount * 0.1)}
+                                              </span>
+                                            </div>
+                                            {!item.isPaid && (
+                                              <div className="flex gap-1">
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="icon" 
+                                                  className="h-7 w-7 text-muted-foreground hover:text-primary"
+                                                  onClick={(e) => handleOpenEdit(e, item)}
+                                                >
+                                                  <Pencil className="h-3.5 w-3.5" />
+                                                </Button>
+                                                <Button 
+                                                  variant="ghost" 
+                                                  size="icon" 
+                                                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                                                  onClick={(e) => handleOpenDelete(e, item.id)}
+                                                >
+                                                  <Trash2 className="h-3.5 w-3.5" />
+                                                </Button>
+                                              </div>
+                                            )}
                                           </div>
                                         </div>
                                       ))}
@@ -496,7 +589,7 @@ export default function HistoryPage() {
                       "flex justify-between items-center p-3 rounded-lg border border-border/40 shadow-sm transition-transform hover:scale-[1.02]",
                       entry.isPaid ? "bg-emerald-50" : "bg-white"
                     )}>
-                      <div className="flex flex-col min-w-0">
+                      <div className="flex flex-col min-w-0 flex-1">
                         <span className="text-sm font-medium text-primary truncate pr-2">{entry.description}</span>
                         <div className="flex items-center gap-1.5 mt-0.5">
                           <span className="text-[10px] text-muted-foreground">
@@ -513,9 +606,31 @@ export default function HistoryPage() {
                           </button>
                         </div>
                       </div>
-                      <span className="font-bold text-xs sm:text-sm whitespace-nowrap">
-                        {currencyFormatter.format(entry.amount)}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="font-bold text-xs sm:text-sm whitespace-nowrap">
+                          {currencyFormatter.format(entry.amount)}
+                        </span>
+                        {!entry.isPaid && (
+                          <div className="flex gap-1">
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-muted-foreground hover:text-primary"
+                              onClick={(e) => handleOpenEdit(e, entry)}
+                            >
+                              <Pencil className="h-3.5 w-3.5" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                              onClick={(e) => handleOpenDelete(e, entry.id)}
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   ))}
                   {filteredRecentEntries.length === 0 && (
@@ -609,6 +724,72 @@ export default function HistoryPage() {
           </CardContent>
         </Card>
       </main>
+
+      {/* Diálogos de Edição e Exclusão */}
+      <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Entrada</DialogTitle>
+            <DialogDescription>
+              Altere os detalhes do lançamento financeiro.
+            </DialogDescription>
+          </DialogHeader>
+          <form onSubmit={handleUpdateIncome} className="space-y-4 py-2">
+            <div className="grid gap-2">
+              <Label htmlFor="edit-amount">Valor (R$)</Label>
+              <Input
+                id="edit-amount"
+                type="number"
+                step="0.01"
+                value={editAmount}
+                onChange={(e) => setEditAmount(e.target.value)}
+                required
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">Descrição</Label>
+              <Input
+                id="edit-description"
+                value={editDescription}
+                onChange={(e) => setEditDescription(e.target.value)}
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-date">Data</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={editDate}
+                onChange={(e) => setEditDate(e.target.value)}
+                required
+              />
+            </div>
+            <DialogFooter className="mt-4">
+              <Button type="button" variant="outline" onClick={() => setEditingEntry(null)}>
+                Cancelar
+              </Button>
+              <Button type="submit">Salvar Alterações</Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={!!deletingEntryId} onOpenChange={(open) => !open && setDeletingEntryId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Esta ação não pode ser desfeita. Isso excluirá permanentemente o registro de entrada.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteIncome} className="bg-destructive text-destructive-foreground hover:bg-destructive/90">
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
