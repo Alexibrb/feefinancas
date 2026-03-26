@@ -263,7 +263,7 @@ export default function HistoryPage() {
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         <header className="mb-6 sm:mb-8 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <h1 className="text-2xl sm:text-3xl font-headline font-bold text-primary">Histórico de Mordomia</h1>
+            <h1 className="text-2xl sm:text-3xl font-headline font-bold text-primary">Histórico de Finanças</h1>
             <p className="text-sm sm:text-base text-muted-foreground">Consulte o resumo de entradas e o checkout de dízimos.</p>
           </div>
           {hasActiveFilters && (
