@@ -1,4 +1,3 @@
-
 "use client";
 
 import React, { useMemo, useState } from "react";
@@ -172,11 +171,21 @@ export default function HistoryPage() {
   // Ações de Checkout
   const handleToggleEntryPaid = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
+    const entry = entries.find(ent => ent.id === id);
+    const becomingPaid = entry ? !entry.isPaid : false;
     togglePaidStatus(id);
-    toast({
-      title: "Status Atualizado",
-      description: "O status da entrada foi alterado.",
-    });
+    
+    if (becomingPaid) {
+      toast({
+        title: "Dízimo Confirmado",
+        description: "Deus abençoe sua vida",
+      });
+    } else {
+      toast({
+        title: "Status Atualizado",
+        description: "O status da entrada foi alterado.",
+      });
+    }
   };
 
   const handleMarkMonthAsPaidAction = (e: React.MouseEvent, key: string) => {
@@ -184,7 +193,7 @@ export default function HistoryPage() {
     markMonthAsPaid(key);
     toast({
       title: "Mês Confirmado",
-      description: "Todas as entradas do mês foram marcadas como pagas.",
+      description: "Deus abençoe sua vida",
     });
   };
 

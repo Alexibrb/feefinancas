@@ -1,4 +1,3 @@
-
 "use client";
 
 import { useState } from "react";
@@ -142,18 +141,28 @@ export default function Dashboard() {
   };
 
   const handleTogglePaid = (id: string) => {
+    const entry = entries.find(e => e.id === id);
+    const becomingPaid = entry ? !entry.isPaid : false;
     togglePaidStatus(id);
-    toast({
-      title: "Status Atualizado",
-      description: "O status do dízimo desta entrada foi alterado.",
-    });
+    
+    if (becomingPaid) {
+      toast({
+        title: "Dízimo Confirmado",
+        description: "Deus abençoe sua vida",
+      });
+    } else {
+      toast({
+        title: "Status Atualizado",
+        description: "O status do dízimo desta entrada foi alterado.",
+      });
+    }
   };
 
   const handleMarkAllPaid = () => {
     markMonthAsPaid(currentYearMonth);
     toast({
       title: "Mês Finalizado",
-      description: "Todas as entradas deste mês foram marcadas como pagas.",
+      description: "Deus abençoe sua vida",
     });
   };
 
