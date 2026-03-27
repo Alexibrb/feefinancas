@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wallet, TrendingUp, HandCoins, Plus, Calendar as CalendarIcon, Pencil, Trash2, CheckCircle2, Circle, Loader2, BarChart3 } from "lucide-react";
+import { Wallet, TrendingUp, HandCoins, Plus, Calendar as CalendarIcon, Pencil, Trash2, CheckCircle2, Circle, Loader2, LineChart as LineChartIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, getYear, getMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Bar, BarChart, CartesianGrid, XAxis, ResponsiveContainer } from "recharts";
+import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 const chartConfig = {
@@ -266,50 +266,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <div className="grid gap-8 mb-10">
-          <Card className="shadow-lg border-border/50">
-            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-              <div>
-                <CardTitle className="font-headline text-lg sm:text-xl flex items-center gap-2 text-primary">
-                  <BarChart3 className="h-5 w-5 text-accent" />
-                  Evolução de Dízimos
-                </CardTitle>
-                <CardDescription>Resumo mensal de contribuições</CardDescription>
-              </div>
-              <Select value={chartYear} onValueChange={setChartYear}>
-                <SelectTrigger className="w-full sm:w-[180px]">
-                  <SelectValue placeholder="Escolha o ano" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todo o Período</SelectItem>
-                  {availableYears.map(year => (
-                    <SelectItem key={year} value={year}>{year}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[300px] w-full">
-                {chartData.length === 0 ? (
-                  <div className="h-full flex items-center justify-center text-muted-foreground">
-                    Sem dados para exibir no gráfico.
-                  </div>
-                ) : (
-                  <ChartContainer config={chartConfig} className="h-full w-full">
-                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
-                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="tithe" fill="var(--color-tithe)" radius={[4, 4, 0, 0]} />
-                    </BarChart>
-                  </ChartContainer>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
+        <div className="grid gap-6 sm:gap-8 lg:grid-cols-2 mb-10">
           <Card className="shadow-lg border-border/50 h-fit">
             <CardHeader>
               <CardTitle className="font-headline text-lg sm:text-xl flex items-center gap-2 text-primary">
@@ -372,6 +329,50 @@ export default function Dashboard() {
                   ))}
                 </div>
               )}
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid gap-8 mb-10">
+          <Card className="shadow-lg border-border/50">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="font-headline text-lg sm:text-xl flex items-center gap-2 text-primary">
+                  <LineChartIcon className="h-5 w-5 text-accent" />
+                  Evolução de Dízimos
+                </CardTitle>
+                <CardDescription>Resumo mensal de contribuições</CardDescription>
+              </div>
+              <Select value={chartYear} onValueChange={setChartYear}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Escolha o ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo o Período</SelectItem>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full">
+                {chartData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-muted-foreground">
+                    Sem dados para exibir no gráfico.
+                  </div>
+                ) : (
+                  <ChartContainer config={chartConfig} className="h-full w-full">
+                    <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <YAxis axisLine={false} tickLine={false} tick={{ fontSize: 12 }} tickFormatter={(value) => `R$ ${value}`} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="tithe" stroke="var(--color-tithe)" strokeWidth={2} dot={{ r: 4, fill: "var(--color-tithe)" }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ChartContainer>
+                )}
+              </div>
             </CardContent>
           </Card>
         </div>
