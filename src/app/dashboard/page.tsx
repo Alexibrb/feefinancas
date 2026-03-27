@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wallet, TrendingUp, HandCoins, Plus, Calendar as CalendarIcon, Pencil, CheckCircle2, Circle, Loader2, LineChart as LineChartIcon } from "lucide-react";
+import { Wallet, TrendingUp, HandCoins, Plus, Calendar as CalendarIcon, Pencil, CheckCircle2, Circle, Loader2, LineChart as LineChartIcon, Quote } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, getYear, getMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -277,7 +277,7 @@ export default function Dashboard() {
               </SelectContent>
             </Select>
           </CardHeader>
-          <CardContent>
+          <CardContent className="space-y-6 sm:space-y-8">
             <div className="h-[300px] w-full">
               {chartData.length === 0 ? <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados para o gráfico.</div> : (
                 <ChartContainer config={chartConfig} className="h-full w-full">
@@ -290,6 +290,16 @@ export default function Dashboard() {
                   </LineChart>
                 </ChartContainer>
               )}
+            </div>
+
+            <div className="border-t pt-6 sm:pt-8 text-center px-4 max-w-3xl mx-auto space-y-4">
+              <div className="flex justify-center">
+                <Quote className="h-8 w-8 text-accent opacity-20 rotate-180" />
+              </div>
+              <h3 className="font-headline font-bold text-black text-lg sm:text-xl">Malaquias 3:10</h3>
+              <p className="text-sm sm:text-base italic text-muted-foreground leading-relaxed">
+                "Trazei todos os dízimos à casa do tesouro, para que haja mantimento na minha casa, e depois fazei prova de mim nisto, diz o Senhor dos Exércitos, se eu não vos abrir as janelas do céu, e não derramar sobre vós uma bênção tal até que não haja lugar suficiente para a recolherdes."
+              </p>
             </div>
           </CardContent>
         </Card>
