@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    /**
+     * Fé & Finanças Security Rules
+     *
+     * Core Philosophy:
+     * This ruleset enforces a strict user-ownership model where all data is hierarchically
+     * organized under a specific user's path. Authorization is primarily derived from the
+     * document path, ensuring that users can only access and manage their own financial data.
+     *
+     * Data Structure:
+     * All application data is nested under the root `/users/{userId}` path. 
+     * - User profiles are stored at `/users/{userId}`.
+     * - Income and tithe records are stored at `/users/{userId}/incomeEntries/{entryId}`.
+     *
+     * Key Security Decisions:
+     * 1. Path-Based Authorization: The `{userId}` wildcard in the path is compared directly 
+     *    against the authenticated user's UID (`request.auth.uid`).
+     * 2. Denormalization for Performance: The `userId` is denormalized within subcollection 
+     *    documents to allow for efficient validation without cross-document lookups (get() calls).
+     * 3. Prototyping Flexibility: While ownership and relational integrity (matching IDs) 
+     *    are strictly enforced, the specific schema/fields of the data are not validated to 
+     *    allow for rapid frontend iteration.
+     * 4. Implicit Privacy: There are no public collections. All data requires a valid 
+     *    Firebase Authentication session matching the resource owner.
+     */
+
+    // --- Global Helper Functions ---
+
+    /** @description Checks if the request is made by a signed-in user. */
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    /** @description Checks if the authenticated user matches the provided userId. */
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    /** @description Checks if the user is the owner and the document exists (for updates/deletes). */
+    function isExistingOwner(userId) {
+      return isOwner(userId) && resource != null;
+    }
+
+    // --- Collection Rules ---
+
+    /**
+     * @description Rules for UserProfile documents. Enforces that a user can only manage their own profile.
+     * @path /users/{userId}
+     * @allow (create) User 'abc' creates document at /users/abc where data.id == 'abc'.
+     * @deny (get) User 'abc' tries to read /users/def.
+     * @principle Restricts access to a user's own data tree and validates relational integrity between path and data.
+     */
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if isOwner(userId);
+      allow create: if isOwner(userId) && request.resource.data.id == userId;
+      allow update: if isExistingOwner(userId) && request.resource.data.id == resource.data.id;
+      allow delete: if isExistingOwner(userId);
+
+      /**
+       * @description Rules for IncomeEntry documents. Each entry is scoped to a specific user.
+       * @path /users/{userId}/incomeEntries/{incomeEntryId}
+       * @allow (list) User 'abc' fetches all documents under /users/abc/incomeEntries.
+       * @deny (update) User 'abc' tries to change the 'userId' field on an existing entry.
+       * @principle Uses denormalized ownership fields to prevent unauthorized access and ensures data consistency.
+       */
+      match /incomeEntries/{incomeEntryId} {
+        allow get: if isOwner(userId);
+        allow list: if isOwner(userId);
+        allow create: if isOwner(userId) && request.resource.data.userId == userId;
+        allow update: if isExistingOwner(userId) && request.resource.data.userId == resource.data.userId;
+        allow delete: if isExistingOwner(userId);
+      }
+    }
+
+    // Default deny for any unmatched paths
+    match /{path=**} {
+      allow read, write: if false;
+    }
+  }
+}
