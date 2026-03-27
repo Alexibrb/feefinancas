@@ -1,43 +1,91 @@
-
 "use client";
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { useAppStore } from "@/lib/store";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Leaf } from "lucide-react";
+import { Leaf, Loader2 } from "lucide-react";
 import Image from "next/image";
+import { useAuth, useUser, useFirestore } from "@/firebase";
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword } from "firebase/auth";
+import { doc, setDoc, serverTimestamp } from "firebase/firestore";
+import { useToast } from "@/hooks/use-toast";
 
 export default function LandingPage() {
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [isRegistering, setIsRegistering] = useState(false);
-  const { login, currentUser } = useAppStore();
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const auth = useAuth();
+  const db = useFirestore();
+  const { user, isUserLoading } = useUser();
   const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
-    if (currentUser) {
+    if (user && !isUserLoading) {
       router.push("/dashboard");
     }
-  }, [currentUser, router]);
+  }, [user, isUserLoading, router]);
 
-  if (currentUser) {
-    return null;
+  if (isUserLoading || user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
   }
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    login(email, isRegistering ? name : "Usuário");
-    router.push("/dashboard");
+    if (!email || !password) return;
+    
+    setIsLoading(true);
+    try {
+      if (isRegistering) {
+        const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+        const uid = userCredential.user.uid;
+        
+        // Create User Profile in Firestore
+        await setDoc(doc(db, "users", uid), {
+          id: uid,
+          email,
+          firstName: name.split(' ')[0] || "Usuário",
+          lastName: name.split(' ').slice(1).join(' ') || "",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        toast({
+          title: "Conta criada!",
+          description: "Bem-vindo ao Fé & Finanças.",
+        });
+      } else {
+        await signInWithEmailAndPassword(auth, email, password);
+        toast({
+          title: "Bem-vindo de volta!",
+          description: "Acessando seus registros.",
+        });
+      }
+      router.push("/dashboard");
+    } catch (error: any) {
+      toast({
+        title: "Erro na autenticação",
+        description: error.message || "Verifique seus dados e tente novamente.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="min-h-screen grid lg:grid-cols-2">
-      {/* Lado Esquerdo - Hero (Escondido em Mobile) */}
+      {/* Lado Esquerdo - Hero */}
       <div className="relative hidden lg:block overflow-hidden">
         <div className="absolute inset-0 bg-primary/20 mix-blend-multiply z-10" />
         <Image
@@ -61,7 +109,6 @@ export default function LandingPage() {
 
       {/* Lado Direito - Form de Login/Cadastro */}
       <div className="flex flex-col items-center justify-center p-6 sm:p-8 bg-background relative">
-        {/* Background Decorativo Mobile */}
         <div className="lg:hidden absolute inset-0 -z-10 opacity-5 pointer-events-none">
           <Image
             src="https://picsum.photos/seed/finance-growth/600/400"
@@ -121,7 +168,24 @@ export default function LandingPage() {
                     required 
                   />
                 </div>
-                <Button type="submit" className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-6 text-base shadow-lg transition-all active:scale-[0.98] mt-4">
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="text-xs uppercase tracking-wider font-bold opacity-70">Senha</Label>
+                  <Input 
+                    id="password" 
+                    type="password" 
+                    placeholder="••••••••" 
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="py-5"
+                    required 
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  disabled={isLoading}
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-semibold py-6 text-base shadow-lg transition-all active:scale-[0.98] mt-4"
+                >
+                  {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
                   {isRegistering ? "Começar Agora" : "Acessar Sistema"}
                 </Button>
               </form>
@@ -140,12 +204,6 @@ export default function LandingPage() {
               </div>
             </CardContent>
           </Card>
-          
-          <div className="text-center mt-12">
-            <p className="text-[10px] text-muted-foreground uppercase tracking-widest opacity-50">
-              Gerencie seus recursos com fé e propósito
-            </p>
-          </div>
         </div>
       </div>
     </div>

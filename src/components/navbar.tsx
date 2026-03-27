@@ -1,24 +1,25 @@
-
 "use client";
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Leaf, LayoutDashboard, History, LogOut } from "lucide-react";
-import { useAppStore } from "@/lib/store";
 import { cn } from "@/lib/utils";
+import { useAuth, useUser } from "@/firebase";
+import { signOut } from "firebase/auth";
 
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { logout, currentUser } = useAppStore();
+  const auth = useAuth();
+  const { user } = useUser();
 
-  const handleLogout = () => {
-    logout();
+  const handleLogout = async () => {
+    await signOut(auth);
     router.push("/");
   };
 
-  if (!currentUser) return null;
+  if (!user) return null;
 
   const navItems = [
     { label: "Painel", href: "/dashboard", icon: LayoutDashboard },
