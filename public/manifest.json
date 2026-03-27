@@ -1,10 +1,10 @@
 {
-  "name": "Fé & Finanças",
-  "short_name": "Fé&Finanças",
-  "description": "Sistema de controle de dízimos e reflexão sobre mordomia financeira.",
+  "name": "Dizimista Fiel",
+  "short_name": "Dizimista Fiel",
+  "description": "Controle de dízimos e finanças com propósito.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f2f7f4",
+  "background_color": "#ffffff",
   "theme_color": "#1a3324",
   "icons": [
     {

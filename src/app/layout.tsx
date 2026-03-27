@@ -10,7 +10,7 @@ export const metadata: Metadata = {
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
-    title: 'Fé & Finanças',
+    title: 'Dizimista Fiel',
   },
   formatDetection: {
     telephone: false,
