@@ -10,8 +10,6 @@ import { Button } from "@/components/ui/button";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
-  Wallet, 
-  HandCoins, 
   RotateCcw, 
   FileDown, 
   CheckCircle2, 
@@ -153,9 +151,9 @@ export default function HistoryPage() {
   if (isUserLoading || !user) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-accent" /></div>;
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background flex flex-col">
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 w-full">
         <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl sm:text-3xl font-headline font-bold text-black">Histórico de Finanças</h1>
@@ -166,8 +164,8 @@ export default function HistoryPage() {
           )}
         </header>
 
-        <div className="grid gap-6 lg:grid-cols-3">
-          <div className="lg:col-span-2 space-y-6">
+        <div className="grid gap-6 lg:grid-cols-3 w-full">
+          <div className="lg:col-span-2 space-y-6 w-full">
             <Card className="shadow-lg border-border/50 overflow-hidden w-full">
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b bg-muted/20">
                 <div className="flex items-center gap-2">
@@ -177,7 +175,7 @@ export default function HistoryPage() {
                 <Button variant="ghost" size="icon" onClick={() => exportPDF("Resumo Mensal", groupedEntries.map(g => [`${g.month} ${g.year}`, currencyFormatter.format(g.total), currencyFormatter.format(g.tithe), g.isFullyPaid ? "Dízimo Devolvido" : "Pendente"]), ["Mês/Ano", "Total", "Dízimo", "Status"], "resumo-mensal")}><FileDown className="h-5 w-5" /></Button>
               </CardHeader>
               <CardContent className="p-0 overflow-x-auto">
-                <Table className="min-w-[600px]">
+                <Table className="min-w-full">
                   <TableHeader className="bg-muted/10"><TableRow><TableHead>Mês/Ano</TableHead><TableHead className="text-center">Total</TableHead><TableHead className="text-center">Status</TableHead><TableHead className="text-right text-accent font-bold">Dízimo</TableHead></TableRow></TableHeader>
                   <TableBody>
                     {groupedEntries.map((group) => (
@@ -187,7 +185,7 @@ export default function HistoryPage() {
                           <TableCell className="text-center text-black">{currencyFormatter.format(group.total)}</TableCell>
                           <TableCell className="text-center">
                             {group.isFullyPaid ? <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">Dízimo Devolvido</Badge> : 
-                            <Button size="sm" variant="outline" className="h-7 text-[10px] border-destructive text-destructive" onClick={(e) => handleMarkMonthAsPaidAction(e, group.key)}>Devolver Dízimo</Button>}
+                            <Button size="sm" variant="outline" className="h-7 text-[10px] border-destructive text-destructive hover:bg-destructive hover:text-white" onClick={(e) => handleMarkMonthAsPaidAction(e, group.key)}>Devolver Dízimo</Button>}
                           </TableCell>
                           <TableCell className="text-right font-headline font-bold text-accent">{currencyFormatter.format(group.tithe)}</TableCell>
                         </TableRow>
@@ -228,8 +226,9 @@ export default function HistoryPage() {
                   <Button variant="ghost" size="icon" onClick={() => exportPDF(`Resumo Anual ${annualSummary.year}`, MONTHS_FULL.map((m, i) => [m, currencyFormatter.format(annualSummary.months[i])]), ["Mês", "Dízimo"], "resumo-anual")}><FileDown className="h-5 w-5" /></Button>
                 </div>
               </CardHeader>
-              <CardContent className="p-0">
-                <Table><TableHeader className="bg-muted/10"><TableRow><TableHead>Mês</TableHead><TableHead className="text-right">Dízimo</TableHead></TableRow></TableHeader>
+              <CardContent className="p-0 overflow-x-auto">
+                <Table className="min-w-full">
+                  <TableHeader className="bg-muted/10"><TableRow><TableHead>Mês</TableHead><TableHead className="text-right">Dízimo</TableHead></TableRow></TableHeader>
                   <TableBody>{MONTHS_FULL.map((m, i) => (<TableRow key={m} className="hover:bg-muted/30"><TableCell className="font-medium text-black">{m}</TableCell><TableCell className="text-right font-bold text-accent">{currencyFormatter.format(annualSummary.months[i])}</TableCell></TableRow>))}</TableBody>
                 </Table>
               </CardContent>
@@ -254,6 +253,10 @@ export default function HistoryPage() {
           </Card>
         </div>
       </main>
+
+      <footer className="py-8 text-center text-xs text-muted-foreground border-t mt-auto bg-white/50 w-full">
+        <p className="font-medium">Alex Aves - 2026</p>
+      </footer>
 
       <Dialog open={!!editingEntry} onOpenChange={(o) => !o && setEditingEntry(null)}>
         <DialogContent><DialogHeader><DialogTitle>Editar Lançamento</DialogTitle></DialogHeader>

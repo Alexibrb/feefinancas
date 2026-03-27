@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Wallet, TrendingUp, HandCoins, Plus, Calendar as CalendarIcon, Pencil, Trash2, CheckCircle2, Circle, Loader2, LineChart as LineChartIcon } from "lucide-react";
+import { Wallet, TrendingUp, HandCoins, Plus, Calendar as CalendarIcon, Pencil, CheckCircle2, Circle, Loader2, LineChart as LineChartIcon } from "lucide-react";
 import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, getYear, getMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
@@ -32,7 +32,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Line, LineChart, CartesianGrid, XAxis, YAxis, ResponsiveContainer } from "recharts";
+import { Line, LineChart, CartesianGrid, XAxis, YAxis } from "recharts";
 import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 
 const chartConfig = {
@@ -161,9 +161,9 @@ export default function Dashboard() {
   };
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="min-h-screen bg-background text-foreground flex flex-col">
       <Navbar />
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6 sm:space-y-8 w-full">
         <header>
           <h1 className="text-2xl sm:text-3xl font-headline font-bold text-black">
             Olá, {profile?.firstName || "Usuário"}!
@@ -173,7 +173,7 @@ export default function Dashboard() {
           </p>
         </header>
 
-        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 w-full">
           <Card className="border-none shadow-md bg-white w-full">
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">Renda Total do Mês</CardTitle>
@@ -186,7 +186,7 @@ export default function Dashboard() {
             </CardContent>
           </Card>
 
-          <Card className={cn("border-none shadow-md text-white transition-colors duration-300 w-full", isAllPaid ? "bg-emerald-800" : "bg-accent")}>
+          <Card className={cn("border-none shadow-md text-white transition-colors duration-300 w-full", isAllPaid ? "bg-accent" : "bg-accent/90")}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium uppercase tracking-wider opacity-90">
                 {isAllPaid ? "Dízimo Devolvido" : "Dízimo Sugerido (10%)"}
@@ -211,7 +211,7 @@ export default function Dashboard() {
           </Card>
         </div>
 
-        <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
+        <div className="grid gap-6 sm:gap-8 lg:grid-cols-2 w-full">
           <Card className="shadow-lg border-border/50 h-fit w-full">
             <CardHeader>
               <CardTitle className="font-headline text-lg sm:text-xl flex items-center gap-2 text-black">
@@ -279,7 +279,7 @@ export default function Dashboard() {
           </CardHeader>
           <CardContent>
             <div className="h-[300px] w-full">
-              {chartData.length === 0 ? <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados.</div> : (
+              {chartData.length === 0 ? <div className="h-full flex items-center justify-center text-muted-foreground">Sem dados para o gráfico.</div> : (
                 <ChartContainer config={chartConfig} className="h-full w-full">
                   <LineChart data={chartData} margin={{ top: 20, right: 10, left: 10, bottom: 5 }}>
                     <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
@@ -294,6 +294,10 @@ export default function Dashboard() {
           </CardContent>
         </Card>
       </main>
+
+      <footer className="py-8 text-center text-xs text-muted-foreground border-t mt-auto bg-white/50 w-full">
+        <p className="font-medium">Alex Aves - 2026</p>
+      </footer>
 
       <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
         <DialogContent>
