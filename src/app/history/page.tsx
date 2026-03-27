@@ -236,6 +236,7 @@ export default function HistoryPage() {
 
   const handleOpenEdit = (e: React.MouseEvent, entry: any) => {
     e.stopPropagation();
+    if (entry.isPaid) return;
     setEditingEntry(entry);
     setEditAmount(entry.amount.toString());
     setEditDescription(entry.description);
@@ -326,7 +327,7 @@ export default function HistoryPage() {
                       <div className="text-sm font-bold text-accent">{currencyFormatter.format(totalMonthlyTithe)}</div>
                     </div>
                   </div>
-                  <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => exportPDF("Resumo Mensal de Entradas", groupedEntries.map(g => [`${g.month} ${g.year}`, currencyFormatter.format(g.total), currencyFormatter.format(g.tithe), g.isFullyPaid ? "Pago" : "Pendente"]), ["Mês/Ano", "Total", "Dízimo", "Status"], "resumo-mensal")}>
+                  <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => exportPDF("Resumo Mensal de Entradas", groupedEntries.map(g => [`${g.month} ${g.year}`, currencyFormatter.format(g.total), currencyFormatter.format(g.tithe), g.isFullyPaid ? "Dízimo Devolvido" : "Pendente"]), ["Mês/Ano", "Total", "Dízimo", "Status"], "resumo-mensal")}>
                     <FileDown className="h-5 w-5" />
                   </Button>
                 </div>
@@ -354,9 +355,9 @@ export default function HistoryPage() {
                             <TableCell className="text-center">{currencyFormatter.format(group.total)}</TableCell>
                             <TableCell className="text-center">
                               {group.isFullyPaid ? (
-                                <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">Pago</Badge>
+                                <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">Dízimo Devolvido</Badge>
                               ) : (
-                                <Button size="sm" variant="outline" className="h-7 text-[10px] border-amber-200 text-amber-600" onClick={(e) => handleMarkMonthAsPaidAction(e, group.key)}>Checkout</Button>
+                                <Button size="sm" variant="outline" className="h-7 text-[10px] border-accent text-accent hover:bg-accent/10" onClick={(e) => handleMarkMonthAsPaidAction(e, group.key)}>Devolver Dízimo</Button>
                               )}
                             </TableCell>
                             <TableCell className="text-right font-headline font-bold text-accent">{currencyFormatter.format(group.tithe)}</TableCell>
@@ -366,24 +367,26 @@ export default function HistoryPage() {
                               <TableCell colSpan={4} className="p-4">
                                 <div className="space-y-2">
                                   {group.items.map((item) => (
-                                    <div key={item.id} className="flex justify-between items-center p-2 bg-white rounded border border-border/40 text-xs shadow-sm">
+                                    <div key={item.id} className="flex justify-between items-center p-3 bg-white rounded border border-border/40 text-xs shadow-sm">
                                       <div className="flex items-center gap-2">
                                         <button onClick={(e) => handleToggleEntryPaid(e, item)} className={cn("transition-colors", item.isPaid ? "text-emerald-700" : "text-muted-foreground/30 hover:text-accent")}>
                                           {item.isPaid ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
                                         </button>
                                         <div className="flex flex-col">
-                                          <span className="font-medium">{item.description}</span>
+                                          <span className="font-medium text-primary">{item.description}</span>
                                           <span className="text-[10px] text-muted-foreground">{format(parseISO(item.entryDate), 'dd/MM/yyyy')}</span>
                                         </div>
                                       </div>
                                       <div className="flex items-center gap-4">
-                                        <span className="font-bold">{currencyFormatter.format(item.amount)}</span>
-                                        {!item.isPaid && (
-                                          <div className="flex gap-1">
-                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={(e) => handleOpenEdit(e, item)}><Pencil className="h-3.5 w-3.5" /></Button>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive" onClick={(e) => { e.stopPropagation(); setDeletingEntryId(item.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
-                                          </div>
-                                        )}
+                                        <span className="font-bold text-primary">{currencyFormatter.format(item.amount)}</span>
+                                        <div className="flex gap-1">
+                                          {!item.isPaid && (
+                                            <>
+                                              <Button variant="ghost" size="icon" className="h-7 w-7 text-primary hover:text-accent" onClick={(e) => handleOpenEdit(e, item)}><Pencil className="h-3.5 w-3.5" /></Button>
+                                              <Button variant="ghost" size="icon" className="h-7 w-7 text-destructive hover:bg-destructive/10" onClick={(e) => { e.stopPropagation(); setDeletingEntryId(item.id); }}><Trash2 className="h-3.5 w-3.5" /></Button>
+                                            </>
+                                          )}
+                                        </div>
                                       </div>
                                     </div>
                                   ))}
@@ -434,7 +437,7 @@ export default function HistoryPage() {
                   <TableBody>
                     {MONTHS_FULL.map((month, index) => (
                       <TableRow key={month} className="hover:bg-muted/30">
-                        <TableCell className="font-medium">{month}</TableCell>
+                        <TableCell className="font-medium text-primary">{month}</TableCell>
                         <TableCell className="text-right font-bold text-accent">
                           {currencyFormatter.format(annualSummary.months[index])}
                         </TableCell>
@@ -451,7 +454,7 @@ export default function HistoryPage() {
               <CardHeader className="space-y-3">
                 <div className="flex items-center justify-between">
                   <CardTitle className="font-headline text-lg">Últimos Registros</CardTitle>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportPDF("Últimos Registros", filteredRecentEntries.map(e => [format(parseISO(e.entryDate), 'dd/MM/yyyy'), e.description, currencyFormatter.format(e.amount), e.isPaid ? "Sim" : "Não"]), ["Data", "Descrição", "Valor", "Pago"], "ultimos-registros")}>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportPDF("Últimos Registros", filteredRecentEntries.map(e => [format(parseISO(e.entryDate), 'dd/MM/yyyy'), e.description, currencyFormatter.format(e.amount), e.isPaid ? "Sim" : "Não"]), ["Data", "Descrição", "Valor", "Dízimo Devolvido"], "ultimos-registros")}>
                     <FileDown className="h-5 w-5" />
                   </Button>
                 </div>
@@ -472,10 +475,10 @@ export default function HistoryPage() {
                   filteredRecentEntries.map((entry) => (
                     <div key={entry.id} className={cn("flex justify-between items-center p-3 rounded-lg border border-border/40 shadow-sm", entry.isPaid ? "bg-emerald-50" : "bg-white")}>
                       <div className="flex flex-col min-w-0 flex-1">
-                        <span className="text-sm font-medium truncate">{entry.description}</span>
+                        <span className="text-sm font-medium truncate text-primary">{entry.description}</span>
                         <span className="text-[10px] text-muted-foreground">{format(parseISO(entry.entryDate), 'dd/MM/yyyy')}</span>
                       </div>
-                      <span className="font-bold text-sm whitespace-nowrap ml-2">{currencyFormatter.format(entry.amount)}</span>
+                      <span className="font-bold text-sm whitespace-nowrap ml-2 text-primary">{currencyFormatter.format(entry.amount)}</span>
                     </div>
                   ))
                 )}

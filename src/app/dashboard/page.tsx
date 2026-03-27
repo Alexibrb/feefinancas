@@ -113,7 +113,7 @@ export default function Dashboard() {
 
   const handleOpenEdit = (entry: any) => {
     if (entry.isPaid) {
-      toast({ title: "Registro Bloqueado", description: "Entradas pagas não podem ser editadas.", variant: "destructive" });
+      toast({ title: "Registro Bloqueado", description: "Entradas com dízimo devolvido não podem ser editadas.", variant: "destructive" });
       return;
     }
     setEditingEntry(entry);
@@ -160,7 +160,7 @@ export default function Dashboard() {
     });
     
     if (becomingPaid) {
-      toast({ title: "Dízimo Confirmado", description: "Deus abençoe sua vida" });
+      toast({ title: "Dízimo Devolvido", description: "Deus abençoe sua vida" });
     }
   };
 
@@ -198,7 +198,7 @@ export default function Dashboard() {
           )}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium uppercase tracking-wider opacity-90">
-                Dízimo Sugerido (10%)
+                {isAllPaid ? "Dízimo Devolvido" : "Dízimo Sugerido (10%)"}
               </CardTitle>
               <HandCoins className="h-4 w-4 sm:h-5 sm:w-5 text-white/70" />
             </CardHeader>
