@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -39,6 +39,12 @@ export default function Dashboard() {
   const { toast } = useToast();
   const router = useRouter();
   
+  useEffect(() => {
+    if (!isUserLoading && !user) {
+      router.push("/");
+    }
+  }, [user, isUserLoading, router]);
+
   // Data Fetching
   const profileRef = useMemoFirebase(() => user ? doc(db, "users", user.uid) : null, [user, db]);
   const { data: profile } = useDoc(profileRef);
@@ -61,10 +67,12 @@ export default function Dashboard() {
   // States for Deleting
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
 
-  if (isUserLoading) return <div className="min-h-screen flex items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
-  if (!user) {
-    router.push("/");
-    return null;
+  if (isUserLoading || !user) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-accent" />
+      </div>
+    );
   }
 
   const now = new Date();
@@ -175,7 +183,7 @@ export default function Dashboard() {
               <CardTitle className="text-xs sm:text-sm font-medium text-muted-foreground uppercase tracking-wider">
                 Renda Total do Mês
               </CardTitle>
-              <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-primary opacity-70" />
+              <Wallet className="h-4 w-4 sm:h-5 sm:w-5 text-accent opacity-70" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl sm:text-3xl font-headline font-bold text-primary">
@@ -186,13 +194,13 @@ export default function Dashboard() {
 
           <Card className={cn(
             "border-none shadow-md text-white transition-colors duration-300",
-            isAllPaid ? "bg-emerald-600" : "bg-primary"
+            isAllPaid ? "bg-emerald-700" : "bg-accent"
           )}>
             <CardHeader className="flex flex-row items-center justify-between pb-2">
               <CardTitle className="text-xs sm:text-sm font-medium uppercase tracking-wider opacity-90">
                 Dízimo Sugerido (10%)
               </CardTitle>
-              <HandCoins className="h-4 w-4 sm:h-5 sm:w-5 text-secondary" />
+              <HandCoins className="h-4 w-4 sm:h-5 sm:w-5 text-white/70" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl sm:text-3xl font-headline font-bold">
@@ -238,7 +246,7 @@ export default function Dashboard() {
                   <Label htmlFor="date">Data</Label>
                   <Input id="date" type="date" value={date} onChange={(e) => setDate(e.target.value)} required />
                 </div>
-                <Button type="submit" className="w-full bg-primary hover:bg-primary/90">Registrar Entrada</Button>
+                <Button type="submit" className="w-full bg-accent hover:bg-accent/90 text-white">Registrar Entrada</Button>
               </form>
             </CardContent>
           </Card>
@@ -252,7 +260,7 @@ export default function Dashboard() {
             </CardHeader>
             <CardContent className="p-0">
               {isEntriesLoading ? (
-                <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-primary" /></div>
+                <div className="p-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-accent" /></div>
               ) : monthEntries.length === 0 ? (
                 <div className="p-8 text-center text-muted-foreground text-sm">Nenhuma entrada este mês.</div>
               ) : (
@@ -260,7 +268,7 @@ export default function Dashboard() {
                   {monthEntries.slice(0, 6).map((entry) => (
                     <div key={entry.id} className={cn("p-4 flex justify-between items-center transition-colors group", entry.isPaid ? "bg-emerald-50/30" : "hover:bg-muted/30")}>
                       <div className="flex items-center gap-3">
-                        <button onClick={() => handleTogglePaid(entry)} className={cn("transition-colors", entry.isPaid ? "text-emerald-600" : "text-muted-foreground/30 hover:text-primary")}>
+                        <button onClick={() => handleTogglePaid(entry)} className={cn("transition-colors", entry.isPaid ? "text-emerald-700" : "text-muted-foreground/30 hover:text-accent")}>
                           {entry.isPaid ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
                         </button>
                         <div>
@@ -271,7 +279,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-4">
                         <div className="font-headline font-bold text-primary">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(entry.amount)}</div>
                         <div className="flex gap-1">
-                          <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => handleOpenEdit(entry)} disabled={entry.isPaid}><Pencil className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-accent" onClick={() => handleOpenEdit(entry)} disabled={entry.isPaid}><Pencil className="h-4 w-4" /></Button>
                           <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeletingEntryId(entry.id)} disabled={entry.isPaid}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </div>
@@ -291,7 +299,7 @@ export default function Dashboard() {
             <div className="grid gap-2"><Label>Valor (R$)</Label><Input type="number" step="0.01" value={editAmount} onChange={(e) => setEditAmount(e.target.value)} required /></div>
             <div className="grid gap-2"><Label>Descrição</Label><Input value={editDescription} onChange={(e) => setEditDescription(e.target.value)} /></div>
             <div className="grid gap-2"><Label>Data</Label><Input type="date" value={editDate} onChange={(e) => setEditDate(e.target.value)} required /></div>
-            <DialogFooter><Button type="submit">Salvar Alterações</Button></DialogFooter>
+            <DialogFooter><Button type="submit" className="bg-accent text-white hover:bg-accent/90">Salvar Alterações</Button></DialogFooter>
           </form>
         </DialogContent>
       </Dialog>
