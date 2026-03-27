@@ -3,30 +3,23 @@
 import React, { useMemo, useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
 import { format, parseISO, getMonth, getYear } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { 
-  TrendingUp, 
-  HandCoins, 
   Wallet, 
-  Eye, 
+  HandCoins, 
   RotateCcw, 
   FileDown, 
   CheckCircle2, 
   Circle,
   Pencil,
   Trash2,
-  ChevronDown,
-  ChevronUp,
-  Filter,
-  Info,
-  Loader2
+  Loader2,
+  CalendarDays
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import jsPDF from "jspdf";
@@ -35,10 +28,11 @@ import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { useUser, useFirestore, useCollection, useMemoFirebase, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
 import { collection, doc, query, orderBy } from "firebase/firestore";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -79,7 +73,6 @@ export default function HistoryPage() {
   const [monthlyFilterYear, setMonthlyFilterYear] = useState(currentYear);
   const [recentFilterMonth, setRecentFilterMonth] = useState("all");
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
-  const [showAllRecent, setShowAllRecent] = useState(false);
 
   // Estados para Edição
   const [editingEntry, setEditingEntry] = useState<any | null>(null);
@@ -96,14 +89,12 @@ export default function HistoryPage() {
     setAnnualFilterYear(currentYear);
     setMonthlyFilterYear(currentYear);
     setRecentFilterMonth("all");
-    setShowAllRecent(false);
     setExpandedMonth(null);
   };
 
   const hasActiveFilters = annualFilterYear !== currentYear || 
                           monthlyFilterYear !== currentYear || 
-                          recentFilterMonth !== "all" || 
-                          showAllRecent;
+                          recentFilterMonth !== "all";
 
   const availableYears = useMemo(() => {
     const years = new Set<string>();
@@ -203,14 +194,11 @@ export default function HistoryPage() {
   }, [groupedEntries]);
 
   const filteredRecentEntries = useMemo(() => {
-    const filtered = [...(entries || [])]
+    return [...(entries || [])]
       .sort((a, b) => b.entryDate.localeCompare(a.entryDate))
       .filter(e => recentFilterMonth === "all" || format(parseISO(e.entryDate), 'yyyy-MM') === recentFilterMonth);
-    
-    return showAllRecent ? filtered : filtered.slice(0, 5);
-  }, [entries, recentFilterMonth, showAllRecent]);
+  }, [entries, recentFilterMonth]);
 
-  // Ações de Checkout
   const handleToggleEntryPaid = (e: React.MouseEvent, entry: any) => {
     e.stopPropagation();
     if (!user) return;
@@ -246,7 +234,6 @@ export default function HistoryPage() {
     toast({ title: "Mês Confirmado", description: "Deus abençoe sua vida" });
   };
 
-  // Funções de Edição e Exclusão
   const handleOpenEdit = (e: React.MouseEvent, entry: any) => {
     e.stopPropagation();
     setEditingEntry(entry);
@@ -282,7 +269,6 @@ export default function HistoryPage() {
     toast({ title: "Excluído", description: "Registro removido." });
   };
 
-  // PDFs (simplificados para brevidade)
   const exportPDF = (title: string, tableData: any[], headers: string[], fileName: string) => {
     const doc = new jsPDF();
     doc.text(title, 14, 15);
@@ -309,39 +295,40 @@ export default function HistoryPage() {
         </header>
 
         <div className="grid gap-6 lg:grid-cols-3 mb-8">
-          <div className="lg:col-span-2">
-            <Card className="shadow-lg border-border/50 h-full overflow-hidden">
+          <div className="lg:col-span-2 space-y-6">
+            <Card className="shadow-lg border-border/50 overflow-hidden">
               <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b bg-muted/20">
-                <div className="flex-1">
-                  <div className="flex flex-wrap items-center gap-2">
-                    <CardTitle className="font-headline text-lg">Resumo Mensal</CardTitle>
-                    <Select value={monthlyFilterYear} onValueChange={setMonthlyFilterYear}>
-                      <SelectTrigger className="w-[140px] h-9 text-xs">
-                        <SelectValue placeholder="Ano" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">Todo o Histórico</SelectItem>
-                        {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle className="font-headline text-lg">Resumo Mensal</CardTitle>
+                  <Select value={monthlyFilterYear} onValueChange={setMonthlyFilterYear}>
+                    <SelectTrigger className="w-[140px] h-9 text-xs">
+                      <SelectValue placeholder="Ano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todo o Histórico</SelectItem>
+                      {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 <div className="flex flex-wrap items-center gap-3">
                   <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-lg border border-border">
                     <Wallet className="h-4 w-4 text-accent" />
                     <div>
-                      <div className="text-[10px] uppercase font-bold text-muted-foreground">Entradas</div>
+                      <div className="text-[10px] uppercase font-bold text-muted-foreground">Total Entradas</div>
                       <div className="text-sm font-bold">{currencyFormatter.format(totalMonthlyIncome)}</div>
                     </div>
                   </div>
                   <div className="flex items-center gap-3 bg-accent/10 px-4 py-2 rounded-lg border border-accent/20">
                     <HandCoins className="h-4 w-4 text-accent" />
                     <div>
-                      <div className="text-[10px] uppercase font-bold text-accent">Dízimo</div>
+                      <div className="text-[10px] uppercase font-bold text-accent">Total Dízimo</div>
                       <div className="text-sm font-bold text-accent">{currencyFormatter.format(totalMonthlyTithe)}</div>
                     </div>
                   </div>
+                  <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => exportPDF("Resumo Mensal de Entradas", groupedEntries.map(g => [`${g.month} ${g.year}`, currencyFormatter.format(g.total), currencyFormatter.format(g.tithe), g.isFullyPaid ? "Pago" : "Pendente"]), ["Mês/Ano", "Total", "Dízimo", "Status"], "resumo-mensal")}>
+                    <FileDown className="h-5 w-5" />
+                  </Button>
                 </div>
               </CardHeader>
               <CardContent className="p-0">
@@ -411,12 +398,63 @@ export default function HistoryPage() {
                 )}
               </CardContent>
             </Card>
+
+            <Card className="shadow-lg border-border/50 overflow-hidden">
+              <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 border-b bg-muted/20">
+                <div className="flex flex-wrap items-center gap-2">
+                  <CardTitle className="font-headline text-lg">Resumo Anual de Dízimos</CardTitle>
+                  <Select value={annualFilterYear} onValueChange={setAnnualFilterYear}>
+                    <SelectTrigger className="w-[140px] h-9 text-xs">
+                      <SelectValue placeholder="Ano" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todo o Histórico</SelectItem>
+                      {availableYears.map(year => <SelectItem key={year} value={year}>{year}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="text-right">
+                    <div className="text-[10px] uppercase font-bold text-muted-foreground">Total Dízimo {annualSummary.year}</div>
+                    <div className="text-lg font-bold text-accent">{currencyFormatter.format(annualSummary.totalYear)}</div>
+                  </div>
+                  <Button variant="ghost" size="icon" className="h-9 w-9" onClick={() => exportPDF(`Resumo Anual - ${annualSummary.year}`, MONTHS_FULL.map((m, i) => [m, currencyFormatter.format(annualSummary.months[i])]), ["Mês", "Dízimo"], "resumo-anual")}>
+                    <FileDown className="h-5 w-5" />
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader className="bg-muted/10">
+                    <TableRow>
+                      <TableHead>Mês</TableHead>
+                      <TableHead className="text-right">Dízimo Calculado</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {MONTHS_FULL.map((month, index) => (
+                      <TableRow key={month} className="hover:bg-muted/30">
+                        <TableCell className="font-medium">{month}</TableCell>
+                        <TableCell className="text-right font-bold text-accent">
+                          {currencyFormatter.format(annualSummary.months[index])}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
           </div>
 
           <div className="lg:col-span-1">
             <Card className="shadow-md border-border/50 bg-white/50 h-full">
               <CardHeader className="space-y-3">
-                <CardTitle className="font-headline text-lg">Últimos Registros</CardTitle>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="font-headline text-lg">Últimos Registros</CardTitle>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => exportPDF("Últimos Registros", filteredRecentEntries.map(e => [format(parseISO(e.entryDate), 'dd/MM/yyyy'), e.description, currencyFormatter.format(e.amount), e.isPaid ? "Sim" : "Não"]), ["Data", "Descrição", "Valor", "Pago"], "ultimos-registros")}>
+                    <FileDown className="h-5 w-5" />
+                  </Button>
+                </div>
                 <Select value={recentFilterMonth} onValueChange={setRecentFilterMonth}>
                   <SelectTrigger className="w-full h-9 text-xs"><SelectValue placeholder="Filtrar por mês" /></SelectTrigger>
                   <SelectContent>
@@ -426,22 +464,28 @@ export default function HistoryPage() {
                 </Select>
               </CardHeader>
               <CardContent className="space-y-3">
-                {filteredRecentEntries.map((entry) => (
-                  <div key={entry.id} className={cn("flex justify-between items-center p-3 rounded-lg border border-border/40 shadow-sm", entry.isPaid ? "bg-emerald-50" : "bg-white")}>
-                    <div className="flex flex-col min-w-0 flex-1">
-                      <span className="text-sm font-medium truncate">{entry.description}</span>
-                      <span className="text-[10px] text-muted-foreground">{format(parseISO(entry.entryDate), 'dd/MM/yyyy')}</span>
+                {isEntriesLoading ? (
+                  <div className="py-8 text-center"><Loader2 className="h-6 w-6 animate-spin mx-auto text-accent" /></div>
+                ) : filteredRecentEntries.length === 0 ? (
+                  <div className="py-8 text-center text-muted-foreground text-xs">Nenhum registro encontrado.</div>
+                ) : (
+                  filteredRecentEntries.map((entry) => (
+                    <div key={entry.id} className={cn("flex justify-between items-center p-3 rounded-lg border border-border/40 shadow-sm", entry.isPaid ? "bg-emerald-50" : "bg-white")}>
+                      <div className="flex flex-col min-w-0 flex-1">
+                        <span className="text-sm font-medium truncate">{entry.description}</span>
+                        <span className="text-[10px] text-muted-foreground">{format(parseISO(entry.entryDate), 'dd/MM/yyyy')}</span>
+                      </div>
+                      <span className="font-bold text-sm whitespace-nowrap ml-2">{currencyFormatter.format(entry.amount)}</span>
                     </div>
-                    <span className="font-bold text-sm whitespace-nowrap ml-2">{currencyFormatter.format(entry.amount)}</span>
-                  </div>
-                ))}
+                  ))
+                )}
               </CardContent>
             </Card>
           </div>
         </div>
       </main>
 
-      {/* Diálogos (Copiados do Dashboard para consistência) */}
+      {/* Diálogos de Edição e Exclusão */}
       <Dialog open={!!editingEntry} onOpenChange={(open) => !open && setEditingEntry(null)}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Entrada</DialogTitle></DialogHeader>
