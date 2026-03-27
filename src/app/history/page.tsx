@@ -357,7 +357,14 @@ export default function HistoryPage() {
                               {group.isFullyPaid ? (
                                 <Badge variant="secondary" className="bg-emerald-100 text-emerald-800">Dízimo Devolvido</Badge>
                               ) : (
-                                <Button size="sm" variant="outline" className="h-7 text-[10px] border-accent text-accent hover:bg-accent/10" onClick={(e) => handleMarkMonthAsPaidAction(e, group.key)}>Devolver Dízimo</Button>
+                                <Button 
+                                  size="sm" 
+                                  variant="outline" 
+                                  className="h-7 text-[10px] border-destructive text-destructive hover:bg-destructive/10" 
+                                  onClick={(e) => handleMarkMonthAsPaidAction(e, group.key)}
+                                >
+                                  Devolver Dízimo
+                                </Button>
                               )}
                             </TableCell>
                             <TableCell className="text-right font-headline font-bold text-accent">{currencyFormatter.format(group.tithe)}</TableCell>
@@ -369,7 +376,7 @@ export default function HistoryPage() {
                                   {group.items.map((item) => (
                                     <div key={item.id} className="flex justify-between items-center p-3 bg-white rounded border border-border/40 text-xs shadow-sm">
                                       <div className="flex items-center gap-2">
-                                        <button onClick={(e) => handleToggleEntryPaid(e, item)} className={cn("transition-colors", item.isPaid ? "text-emerald-700" : "text-muted-foreground/30 hover:text-accent")}>
+                                        <button onClick={(e) => handleToggleEntryPaid(e, item)} className={cn("transition-colors", item.isPaid ? "text-emerald-700" : "text-destructive hover:text-destructive/80")}>
                                           {item.isPaid ? <CheckCircle2 className="h-4 w-4" /> : <Circle className="h-4 w-4" />}
                                         </button>
                                         <div className="flex flex-col">
