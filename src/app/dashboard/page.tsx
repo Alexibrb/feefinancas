@@ -1,23 +1,23 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { Navbar } from "@/components/navbar";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Wallet, TrendingUp, HandCoins, Plus, Calendar as CalendarIcon, Pencil, Trash2, CheckCircle2, Circle, Loader2 } from "lucide-react";
-import { format, startOfMonth, endOfMonth, isWithinInterval } from "date-fns";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Wallet, TrendingUp, HandCoins, Plus, Calendar as CalendarIcon, Pencil, Trash2, CheckCircle2, Circle, Loader2, BarChart3 } from "lucide-react";
+import { format, startOfMonth, endOfMonth, isWithinInterval, parseISO, getYear, getMonth } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useUser, useFirestore, useCollection, useDoc, useMemoFirebase, addDocumentNonBlocking, updateDocumentNonBlocking, deleteDocumentNonBlocking } from "@/firebase";
-import { collection, doc, query, where, orderBy } from "firebase/firestore";
+import { collection, doc, query, orderBy } from "firebase/firestore";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -32,6 +32,17 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import { Bar, BarChart, CartesianGrid, XAxis, ResponsiveContainer } from "recharts";
+import { ChartConfig, ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
+
+const chartConfig = {
+  tithe: {
+    label: "Dízimo",
+    color: "hsl(var(--accent))",
+  },
+} satisfies ChartConfig;
+
+const MONTH_LABELS = ["Jan", "Fev", "Mar", "Abr", "Mai", "Jun", "Jul", "Ago", "Set", "Out", "Nov", "Dez"];
 
 export default function Dashboard() {
   const { user, isUserLoading } = useUser();
@@ -50,13 +61,16 @@ export default function Dashboard() {
   const { data: profile } = useDoc(profileRef);
 
   const entriesRef = useMemoFirebase(() => user ? collection(db, "users", user.uid, "incomeEntries") : null, [user, db]);
-  const entriesQuery = useMemoFirebase(() => entriesRef ? query(entriesRef, orderBy("entryDate", "desc")) : null, [entriesRef]);
+  const entriesQuery = useMemoFirebase(() => entriesRef ? query(entriesRef, orderBy("entryDate", "asc")) : null, [entriesRef]);
   const { data: entries, isLoading: isEntriesLoading } = useCollection(entriesQuery);
 
   // States for Adding
   const [amount, setAmount] = useState("");
   const [description, setDescription] = useState("");
   const [date, setDate] = useState(format(new Date(), 'yyyy-MM-dd'));
+
+  // Chart State
+  const [chartYear, setChartYear] = useState<string>("all");
 
   // States for Editing
   const [editingEntry, setEditingEntry] = useState<any | null>(null);
@@ -66,6 +80,34 @@ export default function Dashboard() {
 
   // States for Deleting
   const [deletingEntryId, setDeletingEntryId] = useState<string | null>(null);
+
+  const availableYears = useMemo(() => {
+    const years = new Set<string>();
+    (entries || []).forEach(e => years.add(getYear(parseISO(e.entryDate)).toString()));
+    return Array.from(years).sort((a, b) => b.localeCompare(a));
+  }, [entries]);
+
+  const chartData = useMemo(() => {
+    if (!entries) return [];
+    
+    const monthlyGroups: Record<string, number> = {};
+    
+    entries.forEach(entry => {
+      const d = parseISO(entry.entryDate);
+      const year = getYear(d).toString();
+      const monthIdx = getMonth(d);
+      
+      if (chartYear === "all" || year === chartYear) {
+        const key = chartYear === "all" ? `${MONTH_LABELS[monthIdx]} ${year}` : MONTH_LABELS[monthIdx];
+        monthlyGroups[key] = (monthlyGroups[key] || 0) + (entry.amount * 0.1);
+      }
+    });
+
+    return Object.entries(monthlyGroups).map(([name, tithe]) => ({
+      name,
+      tithe
+    }));
+  }, [entries, chartYear]);
 
   if (isUserLoading || !user) {
     return (
@@ -113,7 +155,7 @@ export default function Dashboard() {
 
   const handleOpenEdit = (entry: any) => {
     if (entry.isPaid) {
-      toast({ title: "Registro Bloqueado", description: "Entradas com dízimo devolvido não podem ser editadas.", variant: "destructive" });
+      toast({ title: "Registro Bloqueado", description: "Dízimo já devolvido não pode ser editado.", variant: "destructive" });
       return;
     }
     setEditingEntry(entry);
@@ -224,6 +266,49 @@ export default function Dashboard() {
           </Card>
         </div>
 
+        <div className="grid gap-8 mb-10">
+          <Card className="shadow-lg border-border/50">
+            <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div>
+                <CardTitle className="font-headline text-lg sm:text-xl flex items-center gap-2 text-primary">
+                  <BarChart3 className="h-5 w-5 text-accent" />
+                  Evolução de Dízimos
+                </CardTitle>
+                <CardDescription>Resumo mensal de contribuições</CardDescription>
+              </div>
+              <Select value={chartYear} onValueChange={setChartYear}>
+                <SelectTrigger className="w-full sm:w-[180px]">
+                  <SelectValue placeholder="Escolha o ano" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todo o Período</SelectItem>
+                  {availableYears.map(year => (
+                    <SelectItem key={year} value={year}>{year}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[300px] w-full">
+                {chartData.length === 0 ? (
+                  <div className="h-full flex items-center justify-center text-muted-foreground">
+                    Sem dados para exibir no gráfico.
+                  </div>
+                ) : (
+                  <ChartContainer config={chartConfig} className="h-full w-full">
+                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} opacity={0.3} />
+                      <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 12 }} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Bar dataKey="tithe" fill="var(--color-tithe)" radius={[4, 4, 0, 0]} />
+                    </BarChart>
+                  </ChartContainer>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <div className="grid gap-6 sm:gap-8 lg:grid-cols-2">
           <Card className="shadow-lg border-border/50 h-fit">
             <CardHeader>
@@ -255,7 +340,7 @@ export default function Dashboard() {
             <CardHeader>
               <CardTitle className="font-headline text-lg flex items-center gap-2 text-primary">
                 <CalendarIcon className="h-5 w-5 text-accent" />
-                Entradas Recentes
+                Entradas Recentes (Mês Atual)
               </CardTitle>
             </CardHeader>
             <CardContent className="p-0">
@@ -265,22 +350,22 @@ export default function Dashboard() {
                 <div className="p-8 text-center text-muted-foreground text-sm">Nenhuma entrada este mês.</div>
               ) : (
                 <div className="divide-y divide-border">
-                  {monthEntries.slice(0, 6).map((entry) => (
+                  {[...monthEntries].reverse().slice(0, 6).map((entry) => (
                     <div key={entry.id} className={cn("p-4 flex justify-between items-center transition-colors group", entry.isPaid ? "bg-emerald-50/30" : "hover:bg-muted/30")}>
                       <div className="flex items-center gap-3">
-                        <button onClick={() => handleTogglePaid(entry)} className={cn("transition-colors", entry.isPaid ? "text-emerald-700" : "text-muted-foreground/30 hover:text-accent")}>
+                        <button onClick={() => handleTogglePaid(entry)} className={cn("transition-colors", entry.isPaid ? "text-emerald-700" : "text-destructive hover:text-destructive/80")}>
                           {entry.isPaid ? <CheckCircle2 className="h-5 w-5" /> : <Circle className="h-5 w-5" />}
                         </button>
                         <div>
                           <div className={cn("font-medium text-sm truncate", entry.isPaid ? "text-emerald-900" : "text-primary")}>{entry.description}</div>
-                          <div className="text-xs text-muted-foreground">{format(new Date(entry.entryDate), 'dd/MM/yyyy', { locale: ptBR })}</div>
+                          <div className="text-xs text-muted-foreground">{format(parseISO(entry.entryDate), 'dd/MM/yyyy', { locale: ptBR })}</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="font-headline font-bold text-primary">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(entry.amount)}</div>
                         <div className="flex gap-1">
                           <Button variant="ghost" size="icon" className="h-8 w-8 hover:text-accent" onClick={() => handleOpenEdit(entry)} disabled={entry.isPaid}><Pencil className="h-4 w-4" /></Button>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => setDeletingEntryId(entry.id)} disabled={entry.isPaid}><Trash2 className="h-4 w-4" /></Button>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 text-destructive" onClick={() => { setDeletingEntryId(entry.id); }} disabled={entry.isPaid}><Trash2 className="h-4 w-4" /></Button>
                         </div>
                       </div>
                     </div>
